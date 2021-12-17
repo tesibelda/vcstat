@@ -157,8 +157,8 @@ func getHbaTags(vcenter, dcname, hostname, hba, driver string) map[string]string
 
 func getHbaFields(status string, statuscode int16) map[string]interface{} {
 	return map[string]interface{}{
-		"status":      status,
-		"status_code": statuscode,
+		"link_state":      status,
+		"link_state_code": statuscode,
 	}
 }
 
