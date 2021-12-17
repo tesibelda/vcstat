@@ -16,7 +16,7 @@ builds:
       - amd64
     main: ./cmd/main.go
     ldflags:
-      - -s -w -X "main.Version=0.0.1"
+      - -s -w -X "main.Version={{.Version}}"
 archives:
   - format_overrides: &overrides
       - goos: windows

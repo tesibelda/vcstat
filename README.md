@@ -1,6 +1,6 @@
 # Telegraf execd vcstat input
 
-vcstat is a vSphere vCenter input plugin for Telegraf that gathers status and basic stats from vCenter using govmomi library (in a similar way as [gc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with vsphere Telegraf's input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node or HBA goes from green to red, or to know the number of ports used by a Distributed Virtual Switch.
+vcstat is a VMware vSphere input plugin for Telegraf that gathers status and basic stats from vCenter using govmomi library (in a similar way as [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node or HBA goes from green to red, or to know the number of ports used by a Distributed Virtual Switch.
 
 # Configuration
 
@@ -61,7 +61,7 @@ vcstat is a vSphere vCenter input plugin for Telegraf that gathers status and ba
     - dcname
   - fields:
 	- status (string)
-	- status_code (int)
+	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
 	- num_hosts (int)
 	- num_effective_hosts (int)
 	- num_cpu_cores (int)
@@ -78,7 +78,7 @@ vcstat is a vSphere vCenter input plugin for Telegraf that gathers status and ba
     - dcname
   - fields:
 	- status (string)
-	- status_code (int)
+	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
 	- reboot_required (int)
 	- in_maintenance_mode (int)
 	- connection_state (int)
@@ -91,7 +91,7 @@ vcstat is a vSphere vCenter input plugin for Telegraf that gathers status and ba
     - vcenter
     - dcname
   - fields:
-	- link_state (string)
+	- link_state (string) 0-link-up, 1-link-n/a, 2-link-down
 	- link_state_code (int)
 - vcstat_host_nic
   - tags:
@@ -102,7 +102,7 @@ vcstat is a vSphere vCenter input plugin for Telegraf that gathers status and ba
     - dcname
   - fields:
 	- link_status (string)
-	- link_status_code (int)
+	- link_status_code (int) 0-Up, 1-Unknown, 2-Down
 - vcstat_net_dvs
   - tags:
     - dvs
@@ -111,7 +111,7 @@ vcstat is a vSphere vCenter input plugin for Telegraf that gathers status and ba
     - dcname
   - fields:
     - status (string)
-    - status_code (int)
+    - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
     - num_ports (int)
     - max_ports (int)
     - num_standalone_ports (int)
@@ -141,3 +141,11 @@ build the "vcstat" binary
  (if you're using windows, you'll want to give it an .exe extension)
  
     go build -o bin\vcstat.exe cmd/main.go
+
+# Author
+
+Tesifonte Belda
+
+# License
+
+[The MIT License (MIT)](https://github.com/tesibelda/vcstat/blob/master/LICENSE)
