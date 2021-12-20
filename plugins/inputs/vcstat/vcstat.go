@@ -27,7 +27,7 @@ type VcStat struct {
 	HostInstances      bool   `toml:"host_instances"`
 	HostHBAInstances   bool   `toml:"host_hba_instances"`
 	HostNICInstances   bool   `toml:"host_nic_instances"`
-	NetDVSInstances    bool   `toml:"net_instances"`
+	NetDVSInstances    bool   `toml:"net_dvs_instances"`
 	ctx                context.Context
 	cancel             context.CancelFunc
 	vccache            *cache.Session
@@ -89,7 +89,7 @@ func (vcs *VcStat) SampleConfig() string {
   insecure_skip_verify = false
   cluster_instances = true
   host_instances = true
-  net_instances = false
+  net_dvs_instances = false
 `
 }
 
