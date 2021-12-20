@@ -32,6 +32,10 @@ func main() {
 
 	// create the shim. This is what will run your plugins.
 	shim := shim.New()
+	if shim==nil {
+		fmt.Fprintf(os.Stderr, "Error creating telegraf shim\n")
+		os.Exit(1)
+	}
 
 	// If no config is specified, all imported plugins are loaded.
 	// otherwise follow what the config asks for.
@@ -39,13 +43,13 @@ func main() {
 	// (or just use whatever plugins were imported above)
 	err = shim.LoadConfig(configFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading configuration: %s\n", err)
 		os.Exit(1)
 	}
 
 	// run a single plugin until stdin closes or we receive a termination signal
 	if err := shim.Run(*pollInterval); err != nil {
-		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error running telegraf shim: %s\n", err)
 		os.Exit(2)
 	}
 }

@@ -23,8 +23,7 @@ type hsCollector bool
 
 // NewHsCollector returns a new Collector exposing host stats.
 func NewHsCollector() (hsCollector, error) {
-	res := hsCollector(false)
-	return res, nil
+	return hsCollector(true), nil
 }
 
 // Collect gathers host info
@@ -86,7 +85,6 @@ func (c *hsCollector) CollectHBA(ctx context.Context, client *vim25.Client, dcs 
 			}
 		}
 	}
-	*c = true
 
 	return nil
 }
@@ -120,7 +118,6 @@ func (c *hsCollector) CollectNIC(ctx context.Context, client *vim25.Client, dcs 
 			}
 		}
 	}
-	*c = true
 
 	return nil
 }

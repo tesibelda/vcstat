@@ -7,6 +7,7 @@ package vcstat
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -22,8 +23,7 @@ type clCollector bool
 
 // NewClCollector returns a new Collector exposing cluster stats.
 func NewClCollector() (clCollector, error) {
-	res := clCollector(false)
-	return res, nil
+	return clCollector(true), nil
 }
 
 // Collect gathers cluster info
@@ -43,6 +43,10 @@ func (c *clCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*
 				return err
 			}
 			resourceSum = clMo.Summary.GetComputeResourceSummary()
+			if resourceSum == nil {
+				*c = false
+				return fmt.Errorf("coud not get cluster resource summary")
+			}
 			clusterStatusCode = entityStatusCode(resourceSum.OverallStatus)
 
 			cltags := getClTags(client.URL().Host, dc.Name(), cluster.Name(), cluster.Reference().Value)

@@ -38,9 +38,9 @@ type VcStat struct {
 func init() {
 	inputs.Add("vcstat", func() telegraf.Input {
 		return &VcStat{
-			VCenter:            "",
-			Username:           "",
-			Password:           "",
+			VCenter:            "https://vcenter.local/sdk",
+			Username:           "user@corp.local",
+			Password:           "secret",
 			InsecureSkipVerify: true,
 			ClusterInstances:   true,
 			HostInstances:      true,
@@ -54,10 +54,13 @@ func init() {
 func (vcs *VcStat) Init() error {
 	vcs.ctx, vcs.cancel = context.WithCancel(context.Background())
 
-	// Create a vSphere/vCenter client
+	// Create a vSphere vCenter client
 	u, err := soap.ParseURL(vcs.VCenter)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error parsing url for vcenter: %w", err)
+	}
+	if u==nil {
+		return fmt.Errorf("Error parsing url for vcenter: returned nil")
 	}
 	u.User = url.UserPassword(vcs.Username, vcs.Password)
 
@@ -100,19 +103,21 @@ func (vcs *VcStat) Description() string {
 func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 	var err error = nil
 
-	//--- Connect to vCenter API
-	if vcs.ctx == nil || vcs.vccache == nil {
-		err := vcs.Init()
+	//--- re-Init if needed
+	if vcs.ctx == nil || vcs.ctx.Err()!=nil || vcs.vccache == nil || vcs.vccache.URL == nil {
+		err = vcs.Init()
 		if err != nil {
-			return err
+			return gatherError(acc, err)
 		}
 	}
+
+	//--- Connect to vCenter API
 	cli, err := govmomi.NewClient(vcs.ctx, vcs.vccache.URL, true)
 	if err != nil {
-		return err
+		return gatherError(acc, err)
 	}
 	if !cli.IsVC() {
-		return fmt.Errorf("endpoint does not look like a vCenter")
+		return gatherError(acc, fmt.Errorf("Error endpoint does not look like a vCenter"))
 	}
 	defer cli.Logout(vcs.ctx)
 	c := cli.Client
@@ -122,23 +127,18 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 	err = vcC.Collect(vcs.ctx, c, acc)
 	if err != nil && err != context.Canceled {
 		// No need to signal errors if we were merely canceled.
-		acc.AddError(err)
-		return err
+		return gatherError(acc, err)
 	}
 
 	//--- Get Datacenters info and discovery of Dc instances
 	dcC, err := NewDcCollector()
 	err = dcC.Discover(vcs.ctx, c, vcC.dcs)
 	if err != nil && err != context.Canceled {
-		// No need to signal errors if we were merely canceled.
-		acc.AddError(err)
-		return err
+		return gatherError(acc, err)
 	}
 	err = dcC.Collect(vcs.ctx, c, vcC.dcs, acc)
 	if err != nil && err != context.Canceled {
-		// No need to signal errors if we were merely canceled.
-		acc.AddError(err)
-		return err
+		return gatherError(acc, err)
 	}
 	if err == context.Canceled {
 		return nil
@@ -149,38 +149,36 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 		clC, err := NewClCollector()
 		err = clC.Collect(vcs.ctx, c, vcC.dcs, dcC.clusters, acc)
 		if err != nil && err != context.Canceled {
-			acc.AddError(err)
-			return err
+			return gatherError(acc, err)
 		}
 	}
 
 	//--- Get Hosts info and host devices (hba,nic)
-	if vcs.HostInstances && len(dcC.hosts) > 0 {
+	if len(dcC.hosts) > 0 {
 		hsC, err := NewHsCollector()
-		err = hsC.Collect(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
-		if err != nil && err != context.Canceled {
-			acc.AddError(err)
-			return err
-		}
-		if err == context.Canceled {
-			return nil
+		if vcs.HostInstances {
+			err = hsC.Collect(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
+			if err != nil && err != context.Canceled {
+				return gatherError(acc, err)
+			}
+			if err == context.Canceled {
+				return nil
+			}
 		}
 
 		//--- Get Host HBAs info
-		if bool(hsC) && vcs.HostHBAInstances {
+		if vcs.HostHBAInstances && bool(hsC) {
 			err = hsC.CollectHBA(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
 			if err != nil && err != context.Canceled {
-				acc.AddError(err)
-				return err
+				return gatherError(acc, err)
 			}
 		}
 
 		//--- Get Host NICs info
-		if bool(hsC) && vcs.HostNICInstances {
+		if vcs.HostNICInstances && bool(hsC) {
 			err = hsC.CollectNIC(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
 			if err != nil && err != context.Canceled {
-				acc.AddError(err)
-				return err
+				return gatherError(acc, err)
 			}
 		}
 	}
@@ -190,10 +188,17 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 		ntC, err := NewNetCollector()
 		err = ntC.CollectDvs(vcs.ctx, c, vcC.dcs, dcC.net, acc)
 		if err != nil && err != context.Canceled {
-			acc.AddError(err)
-			return err
+			return gatherError(acc, err)
 		}
 	}
 
 	return nil
+}
+
+// gatherError returns the error and adds it to the telegraf accumulator
+func gatherError(acc telegraf.Accumulator, err error) error {
+	if err != nil {
+		acc.AddError(err)
+	}
+	return err
 }

@@ -23,8 +23,7 @@ type netCollector bool
 
 // NewNetCollector returns a new Collector exposing DVS stats.
 func NewNetCollector() (netCollector, error) {
-	res := netCollector(false)
-	return res, nil
+	return netCollector(true), nil
 }
 
 // Collect gathers DVS info
@@ -50,6 +49,10 @@ func (c *netCollector) CollectDvs(ctx context.Context, client *vim25.Client, dcs
 					return fmt.Errorf("could not get dvs config property: %w", err)
 				}
 				dvsConfig = dvsMo.Config.GetDVSConfigInfo()
+				if dvsConfig == nil {
+					*c = false
+					return fmt.Errorf("coud not get dvs configuration info")
+				}
 
 				dvstags := getDvsTags(client.URL().Host, dc.Name(), dvs.Name(), net.Reference().Value)
 				dvsfields := getDvsFields(string(dvsMo.OverallStatus), entityStatusCode(dvsMo.OverallStatus), dvsConfig.NumPorts, dvsConfig.MaxPorts, dvsConfig.NumStandalonePorts)
