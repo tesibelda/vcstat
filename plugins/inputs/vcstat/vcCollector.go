@@ -46,6 +46,7 @@ func (c *vcCollector) Collect(
 	vctags := getVcenterTags(client.URL().Host)
 	vcfields := getVcenterFields(
 			client.ServiceContent.About.Version,
+			string(client.ServiceContent.About.Build),
 			client.ServiceContent.About.Name,
 			client.ServiceContent.About.OsType,
 			len(c.dcs),
@@ -61,8 +62,12 @@ func getVcenterTags(vcenter string) map[string]string {
 	}
 }
 
-func getVcenterFields(version, name, ostype string, numdcs int) map[string]interface{} {
+func getVcenterFields(
+		version, build, name, ostype string,
+		numdcs int,
+) map[string]interface{} {
 	return map[string]interface{}{
+		"build":           build,
 		"name":            name,
 		"num_datacenters": numdcs,
 		"ostype":          ostype,

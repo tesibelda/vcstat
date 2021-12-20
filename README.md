@@ -44,6 +44,7 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
     - num_datacenters (int)
     - ostype (string)
     - version (string)
+    - build (string)
 - vcstat_datacenter
   - tags:
     - vcenter
@@ -103,6 +104,10 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
   - fields:
 	- link_status (string)
 	- link_status_code (int) 0-Up, 1-Unknown, 2-Down
+	- admin_status (string)
+	- duplex (string)
+	- speed (int)
+	- mac (string)
 - vcstat_net_dvs
   - tags:
     - dvs
