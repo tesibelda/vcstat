@@ -22,7 +22,7 @@ type vcCollector struct {
 }
 
 // NewVcCollector returns a new Collector exposing vCenter level stats
-func NewVcCollector() (vcCollector, error) {
+func NewVCCollector() (vcCollector, error) {
 	res := vcCollector{
 		dcs: nil,
 	}
@@ -30,7 +30,11 @@ func NewVcCollector() (vcCollector, error) {
 }
 
 // Collect gathers basic vcenter info
-func (c *vcCollector) Collect(ctx context.Context, client *vim25.Client, acc telegraf.Accumulator) error {
+func (c *vcCollector) Collect(
+		ctx context.Context,
+		client *vim25.Client,
+		acc telegraf.Accumulator,
+) error {
 	var err error = nil
 	finder := find.NewFinder(client, false)
 	c.dcs, err = finder.DatacenterList(ctx, "*")
@@ -39,20 +43,25 @@ func (c *vcCollector) Collect(ctx context.Context, client *vim25.Client, acc tel
 	}
 
 	// vCenter info
-	vctags := getVcTags(client.URL().Host)
-	vcfields := getVcFields(client.ServiceContent.About.Version, client.ServiceContent.About.Name, client.ServiceContent.About.OsType, len(c.dcs))
+	vctags := getVcenterTags(client.URL().Host)
+	vcfields := getVcenterFields(
+			client.ServiceContent.About.Version,
+			client.ServiceContent.About.Name,
+			client.ServiceContent.About.OsType,
+			len(c.dcs),
+	)
 	acc.AddFields("vcstat_vcenter", vcfields, vctags, time.Now())
 
 	return nil
 }
 
-func getVcTags(vcenter string) map[string]string {
+func getVcenterTags(vcenter string) map[string]string {
 	return map[string]string{
 		"vcenter": vcenter,
 	}
 }
 
-func getVcFields(version, name, ostype string, numdcs int) map[string]interface{} {
+func getVcenterFields(version, name, ostype string, numdcs int) map[string]interface{} {
 	return map[string]interface{}{
 		"name":            name,
 		"num_datacenters": numdcs,

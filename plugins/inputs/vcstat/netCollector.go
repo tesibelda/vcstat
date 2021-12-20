@@ -27,7 +27,13 @@ func NewNetCollector() (netCollector, error) {
 }
 
 // Collect gathers DVS info
-func (c *netCollector) CollectDvs(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter, netMap map[int][]object.NetworkReference, acc telegraf.Accumulator) error {
+func (c *netCollector) CollectDvs(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		netMap map[int][]object.NetworkReference,
+		acc telegraf.Accumulator,
+) error {
 	var nets []object.NetworkReference
 	var dvsMo mo.DistributedVirtualSwitch
 	var dvsConfig *(types.DVSConfigInfo)
@@ -43,7 +49,11 @@ func (c *netCollector) CollectDvs(ctx context.Context, client *vim25.Client, dcs
 				if !ok {
 					return fmt.Errorf("could not get DVS from networkreference")
 				}
-				err = dvs.Properties(ctx, dvs.Reference(), []string{"config", "overallStatus"}, &dvsMo)
+				err = dvs.Properties(
+						ctx, dvs.Reference(),
+						[]string{"config", "overallStatus"},
+						&dvsMo,
+				)
 				if err != nil {
 					*c = false
 					return fmt.Errorf("could not get dvs config property: %w", err)
@@ -54,8 +64,19 @@ func (c *netCollector) CollectDvs(ctx context.Context, client *vim25.Client, dcs
 					return fmt.Errorf("coud not get dvs configuration info")
 				}
 
-				dvstags := getDvsTags(client.URL().Host, dc.Name(), dvs.Name(), net.Reference().Value)
-				dvsfields := getDvsFields(string(dvsMo.OverallStatus), entityStatusCode(dvsMo.OverallStatus), dvsConfig.NumPorts, dvsConfig.MaxPorts, dvsConfig.NumStandalonePorts)
+				dvstags := getDvsTags(
+						client.URL().Host,
+						dc.Name(),
+						dvs.Name(),
+						net.Reference().Value,
+				)
+				dvsfields := getDvsFields(
+						string(dvsMo.OverallStatus),
+						entityStatusCode(dvsMo.OverallStatus),
+						dvsConfig.NumPorts,
+						dvsConfig.MaxPorts,
+						dvsConfig.NumStandalonePorts,
+				)
 				acc.AddFields("vcstat_net_dvs", dvsfields, dvstags, time.Now())
 			}
 		}
@@ -74,7 +95,11 @@ func getDvsTags(vcenter, dcname, dvs, moid string) map[string]string {
 	}
 }
 
-func getDvsFields(overallstatus string, dvsstatuscode int16, numports, maxports, numsaports int32) map[string]interface{} {
+func getDvsFields(
+		overallstatus string,
+		dvsstatuscode int16,
+		numports, maxports, numsaports int32,
+) map[string]interface{} {
 	return map[string]interface{}{
 		"status":               overallstatus,
 		"status_code":          dvsstatuscode,

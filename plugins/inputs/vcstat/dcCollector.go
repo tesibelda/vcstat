@@ -25,8 +25,8 @@ type dcCollector struct {
 	net      map[int][]object.NetworkReference
 }
 
-// NewDcCollector returns a new Collector exposing Datacenter stats.
-func NewDcCollector() (dcCollector, error) {
+// NewDCCollector returns a new Collector exposing Datacenter stats.
+func NewDCCollector() (dcCollector, error) {
 	res := dcCollector{
 		clusters: make(map[int][]*object.ClusterComputeResource),
 		hosts:    make(map[int][]*object.HostSystem),
@@ -36,7 +36,11 @@ func NewDcCollector() (dcCollector, error) {
 }
 
 // Discover gets clusters and hosts of each datacenter
-func (c *dcCollector) Discover(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter) error {
+func (c *dcCollector) Discover(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+) error {
 	var err error = nil
 
 	finder := find.NewFinder(client, false)
@@ -65,11 +69,16 @@ func (c *dcCollector) Discover(ctx context.Context, client *vim25.Client, dcs []
 }
 
 // Collect gathers datacenter info
-func (c *dcCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter, acc telegraf.Accumulator) error {
+func (c *dcCollector) Collect(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		acc telegraf.Accumulator,
+) error {
 	var err error = nil
 
 	for i, dc := range dcs {
-		// Datacenter info (reference: https://github.com/vmware/govmomi/blob/master/govc/datacenter/info.go)
+		// Datacenter info (ref: https://github.com/vmware/govmomi/blob/master/govc/datacenter/info.go)
 		var dcMo mo.Datacenter
 		err = dc.Properties(ctx, dc.Reference(), []string{"datastore", "network"}, &dcMo)
 		if err != nil {
@@ -77,7 +86,12 @@ func (c *dcCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*
 		}
 
 		dctags := getDcTags(client.URL().Host, dc.Name(), dc.Reference().Value)
-		dcfields := getDcFields(len(c.clusters[i]), len(c.hosts[i]), len(dcMo.Network), len(dcMo.Datastore))
+		dcfields := getDcFields(
+				len(c.clusters[i]),
+				len(c.hosts[i]),
+				len(dcMo.Network),
+				len(dcMo.Datastore),
+		)
 		acc.AddFields("vcstat_datacenter", dcfields, dctags, time.Now())
 	}
 

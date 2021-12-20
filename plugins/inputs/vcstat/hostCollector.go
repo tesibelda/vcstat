@@ -27,11 +27,19 @@ func NewHostCollector() (hostCollector, error) {
 }
 
 // Collect gathers host info
-func (c *hostCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter, hsMap map[int][]*object.HostSystem, acc telegraf.Accumulator) error {
-	var hosts []*object.HostSystem
-	var hsMo mo.HostSystem
-	var err error = nil
-	var hsCode, hsConnectionCode int16 = 0, 0
+func (c *hostCollector) Collect(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		hsMap map[int][]*object.HostSystem,
+		acc telegraf.Accumulator,
+) error {
+	var (
+		hosts []*object.HostSystem
+		hsMo mo.HostSystem
+		err error = nil
+		hsCode, hsConnectionCode int16 = 0, 0
+	)
 
 	for i, dc := range dcs {
 		hosts = hsMap[i]
@@ -44,8 +52,20 @@ func (c *hostCollector) Collect(ctx context.Context, client *vim25.Client, dcs [
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
 			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
 
-			hstags := getHostTags(client.URL().Host, dc.Name(), host.Name(), host.Reference().Value)
-			hsfields := getHostFields(string(hsMo.Summary.OverallStatus), hsCode, hsMo.Summary.RebootRequired, hsMo.Summary.Runtime.InMaintenanceMode, string(hsMo.Summary.Runtime.ConnectionState), hsConnectionCode)
+			hstags := getHostTags(
+					client.URL().Host,
+					dc.Name(),
+					host.Name(),
+					host.Reference().Value,
+			)
+			hsfields := getHostFields(
+					string(hsMo.Summary.OverallStatus),
+					hsCode,
+					hsMo.Summary.RebootRequired,
+					hsMo.Summary.Runtime.InMaintenanceMode,
+					string(hsMo.Summary.Runtime.ConnectionState),
+					hsConnectionCode,
+			)
 			acc.AddFields("vcstat_host", hsfields, hstags, time.Now())
 		}
 	}
@@ -55,7 +75,13 @@ func (c *hostCollector) Collect(ctx context.Context, client *vim25.Client, dcs [
 }
 
 // CollectHBA gathers host HBA info (like govc: storage core adapter list)
-func (c *hostCollector) CollectHBA(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter, hsMap map[int][]*object.HostSystem, acc telegraf.Accumulator) error {
+func (c *hostCollector) CollectHBA(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		hsMap map[int][]*object.HostSystem,
+		acc telegraf.Accumulator,
+) error {
 	var hosts []*object.HostSystem
 
 	for i, dc := range dcs {
@@ -76,8 +102,17 @@ func (c *hostCollector) CollectHBA(ctx context.Context, client *vim25.Client, dc
 					keys = append(keys, key)
 				}
 				for _, rv := range res.Values {
-					hbatags := getHbaTags(client.URL().Host, dc.Name(), host.Name(), rv["HBAName"][0], rv["Driver"][0])
-					hbafields := getHbaFields(rv["LinkState"][0], hbaLinkStateCode(rv["LinkState"][0]))
+					hbatags := getHbaTags(
+						client.URL().Host,
+						dc.Name(),
+						host.Name(),
+						rv["HBAName"][0],
+						rv["Driver"][0],
+					)
+					hbafields := getHbaFields(
+						rv["LinkState"][0],
+						hbaLinkStateCode(rv["LinkState"][0]),
+					)
 					acc.AddFields("vcstat_host_hba", hbafields, hbatags, time.Now())
 				}
 			} else {
@@ -90,7 +125,13 @@ func (c *hostCollector) CollectHBA(ctx context.Context, client *vim25.Client, dc
 }
 
 // CollectNIC gathers host NIC info (like govc: host.esxcli network nic list)
-func (c *hostCollector) CollectNIC(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter, hsMap map[int][]*object.HostSystem, acc telegraf.Accumulator) error {
+func (c *hostCollector) CollectNIC(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		hsMap map[int][]*object.HostSystem,
+		acc telegraf.Accumulator,
+) error {
 	var hosts []*object.HostSystem
 
 	for i, dc := range dcs {
@@ -111,8 +152,19 @@ func (c *hostCollector) CollectNIC(ctx context.Context, client *vim25.Client, dc
 					keys = append(keys, key)
 				}
 				for _, rv := range res.Values {
-					nictags := getNicTags(client.URL().Host, dc.Name(), host.Name(), rv["Name"][0], rv["Driver"][0])
-					nicfields := getNicFields(rv["LinkStatus"][0], nicLinkStatusCode(rv["LinkStatus"][0]), rv["AdminStatus"][0], rv["Duplex"][0], rv["Speed"][0], rv["MACAddress"][0])
+					nictags := getNicTags(
+						client.URL().Host,
+						dc.Name(),
+						host.Name(),
+						rv["Name"][0],
+						rv["Driver"][0],
+					)
+					nicfields := getNicFields(
+						rv["LinkStatus"][0],
+						nicLinkStatusCode(rv["LinkStatus"][0]),
+						rv["AdminStatus"][0], rv["Duplex"][0],
+						rv["Speed"][0], rv["MACAddress"][0],
+					)
 					acc.AddFields("vcstat_host_nic", nicfields, nictags, time.Now())
 				}
 			}
@@ -131,7 +183,13 @@ func getHostTags(vcenter, dcname, hostname, moid string) map[string]string {
 	}
 }
 
-func getHostFields(overallstatus string, hoststatuscode int16, rebootrequired, inmaintenancemode bool, connectionstate string, connectionstatecode int16) map[string]interface{} {
+func getHostFields(
+		overallstatus string,
+		hoststatuscode int16,
+		rebootrequired, inmaintenancemode bool,
+		connectionstate string,
+		connectionstatecode int16,
+) map[string]interface{} {
 	return map[string]interface{}{
 		"status":                overallstatus,
 		"status_code":           hoststatuscode,
@@ -169,14 +227,19 @@ func getNicTags(vcenter, dcname, hostname, nic, driver string) map[string]string
 	}
 }
 
-func getNicFields(status string, statuscode int16, adminStatus, duplex, speed, max string) map[string]interface{} {
+func getNicFields(
+		status string,
+		statuscode int16,
+		adminStatus, duplex, speed, max string,
+) map[string]interface{} {
 	return map[string]interface{}{
 		"link_status":      status,
 		"link_status_code": statuscode,
 	}
 }
 
-// hbaLinkStateCode converts storage adapter Link State to int16 for easy alerting from telegraf metrics
+// hbaLinkStateCode converts storage adapter Link State to int16
+// for easy alerting from telegraf metrics
 func hbaLinkStateCode(state string) int16 {
 	switch state {
 	case "link-up","online":
@@ -192,7 +255,8 @@ func hbaLinkStateCode(state string) int16 {
 	}
 }
 
-// nicLinkStatusCode converts LinkStatus to int16 for easy alerting from telegraf metrics
+// nicLinkStatusCode converts LinkStatus to int16 for easy alerting
+// from telegraf metrics
 func nicLinkStatusCode(state string) int16 {
 	switch state {
 	case "Up":

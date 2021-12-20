@@ -123,7 +123,7 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 	c := cli.Client
 
 	//--- Get vCenter basic stats
-	vcC, err := NewVcCollector()
+	vcC, err := NewVCCollector()
 	err = vcC.Collect(vcs.ctx, c, acc)
 	if err != nil && err != context.Canceled {
 		// No need to signal errors if we were merely canceled.
@@ -131,7 +131,7 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	//--- Get Datacenters info and discovery of Dc instances
-	dcC, err := NewDcCollector()
+	dcC, err := NewDCCollector()
 	err = dcC.Discover(vcs.ctx, c, vcC.dcs)
 	if err != nil && err != context.Canceled {
 		return gatherError(acc, err)
@@ -146,7 +146,7 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 
 	//--- Get Clusters info
 	if vcs.ClusterInstances && len(dcC.clusters) > 0 {
-		clC, err := NewClCollector()
+		clC, err := NewClusterCollector()
 		err = clC.Collect(vcs.ctx, c, vcC.dcs, dcC.clusters, acc)
 		if err != nil && err != context.Canceled {
 			return gatherError(acc, err)

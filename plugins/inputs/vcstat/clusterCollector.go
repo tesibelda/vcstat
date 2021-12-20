@@ -1,4 +1,4 @@
-// clCollector gathers stats at cluster level
+// clusterCollector gathers stats at cluster level
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
@@ -18,21 +18,29 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-// clCollector type indicates succesfull cluster collection or not
-type clCollector bool
+// clusterCollector type indicates succesfull cluster collection or not
+type clusterCollector bool
 
 // NewClCollector returns a new Collector exposing cluster stats.
-func NewClCollector() (clCollector, error) {
-	return clCollector(true), nil
+func NewClusterCollector() (clusterCollector, error) {
+	return clusterCollector(true), nil
 }
 
 // Collect gathers cluster info
-func (c *clCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*object.Datacenter, clMap map[int][]*object.ClusterComputeResource, acc telegraf.Accumulator) error {
-	var clusters []*object.ClusterComputeResource
-	var clMo mo.ClusterComputeResource
-	var resourceSum *(types.ComputeResourceSummary)
-	var err error = nil
-	var clusterStatusCode int16 = 0
+func (c *clusterCollector) Collect(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		clMap map[int][]*object.ClusterComputeResource,
+		acc telegraf.Accumulator,
+) error {
+	var (
+		clusters []*object.ClusterComputeResource
+		clMo mo.ClusterComputeResource
+		resourceSum *(types.ComputeResourceSummary)
+		err error = nil
+		clusterStatusCode int16 = 0
+	)
 
 	for i, dc := range dcs {
 		clusters = clMap[i]
@@ -49,8 +57,24 @@ func (c *clCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*
 			}
 			clusterStatusCode = entityStatusCode(resourceSum.OverallStatus)
 
-			cltags := getClTags(client.URL().Host, dc.Name(), cluster.Name(), cluster.Reference().Value)
-			clfields := getClFields(string(resourceSum.OverallStatus), clusterStatusCode, resourceSum.NumHosts, resourceSum.NumEffectiveHosts, resourceSum.NumCpuCores, resourceSum.NumCpuThreads, int(resourceSum.TotalCpu), int(resourceSum.TotalMemory), int(resourceSum.EffectiveCpu), int(resourceSum.EffectiveMemory))
+			cltags := getClusterTags(
+					client.URL().Host,
+					dc.Name(),
+					cluster.Name(),
+					cluster.Reference().Value,
+			)
+			clfields := getClusterFields(
+					string(resourceSum.OverallStatus),
+					clusterStatusCode,
+					resourceSum.NumHosts,
+					resourceSum.NumEffectiveHosts,
+					resourceSum.NumCpuCores,
+					resourceSum.NumCpuThreads,
+					int(resourceSum.TotalCpu),
+					int(resourceSum.TotalMemory),
+					int(resourceSum.EffectiveCpu),
+					int(resourceSum.EffectiveMemory),
+			)
 			acc.AddFields("vcstat_cluster", clfields, cltags, time.Now())
 		}
 	}
@@ -59,7 +83,7 @@ func (c *clCollector) Collect(ctx context.Context, client *vim25.Client, dcs []*
 	return nil
 }
 
-func getClTags(vcenter, dcname, clustername, moid string) map[string]string {
+func getClusterTags(vcenter, dcname, clustername, moid string) map[string]string {
 	return map[string]string{
 		"vcenter":     vcenter,
 		"dcname":      dcname,
@@ -68,7 +92,13 @@ func getClTags(vcenter, dcname, clustername, moid string) map[string]string {
 	}
 }
 
-func getClFields(overallstatus string, clusterstatuscode int16, numhosts, numeffectivehosts int32, numcpucores, numcputhreads int16, totalcpu, totalmemory, effectivecpu, effectivememory int) map[string]interface{} {
+func getClusterFields(
+		overallstatus string,
+		clusterstatuscode int16,
+		numhosts, numeffectivehosts int32,
+		numcpucores, numcputhreads int16,
+		totalcpu, totalmemory, effectivecpu, effectivememory int,
+) map[string]interface{} {
 	return map[string]interface{}{
 		"status":              overallstatus,
 		"status_code":         clusterstatuscode,
