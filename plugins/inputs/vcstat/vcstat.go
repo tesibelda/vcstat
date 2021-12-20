@@ -155,7 +155,7 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 
 	//--- Get Hosts info and host devices (hba,nic)
 	if len(dcC.hosts) > 0 {
-		hsC, err := NewHsCollector()
+		hsC, err := NewHostCollector()
 		if vcs.HostInstances {
 			err = hsC.Collect(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
 			if err != nil && err != context.Canceled {
