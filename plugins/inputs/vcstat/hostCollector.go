@@ -230,11 +230,15 @@ func getNicTags(vcenter, dcname, hostname, nic, driver string) map[string]string
 func getNicFields(
 		status string,
 		statuscode int16,
-		adminStatus, duplex, speed, max string,
+		adminstatus, duplex, speed, mac string,
 ) map[string]interface{} {
 	return map[string]interface{}{
+		"admin_status":     adminstatus,
 		"link_status":      status,
 		"link_status_code": statuscode,
+		"duplex":           duplex,
+		"mac":              mac,
+		"speed":            speed,
 	}
 }
 
