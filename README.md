@@ -22,6 +22,7 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
   # host_hba_instances = false
   # host_nic_instances = false
   net_dvs_instances = true
+  # net_dvp_instances = false
 ```
 
 * Edit telegraf's execd input configuration as needed. Example:
@@ -108,7 +109,7 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
 	- duplex (string)
 	- speed (int)
 	- mac (string)
-- vcstat_net_dvs
+- vcstat_net_dvs           <- Distributed Virtual Switch
   - tags:
     - dvs
 	- moid
@@ -120,6 +121,17 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
     - num_ports (int)
     - max_ports (int)
     - num_standalone_ports (int)
+- vcstat_net_dvp           <- Distributed Virtual Portgroup
+  - tags:
+    - dvp
+	- moid
+    - vcenter
+    - dcname
+    - uplink (true/false)
+  - fields:
+    - status (string)
+    - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
+    - num_ports (int)
 
 # Example output
 
@@ -130,8 +142,8 @@ vcstat_cluster,clustername=MyCluster-01,dcname=MyDC,moid=domain-c121,vcenter=vce
 vcstat_host,dcname=MyDC,esxhostname=myesxi01.local,moid=host-706,vcenter=vcenter.local connection_state_code=0i,status="green",status_code=0i,reboot_required=false,in_maintenance_mode=false,connection_state="connected" 1639585700602279400
 vcstat_host_hba,dcname=MyDC,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local,vcenter=vcenter.local status="link-n/a",status_code=1i 1639585701216566800
 vcstat_host_nic,dcname=MyDC,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1639585702275580100
-vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-102,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
-```
+vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
+vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200```
 
 # Build Instructions
 

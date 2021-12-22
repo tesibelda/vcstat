@@ -14,7 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/session/cache"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
 )
 
@@ -28,6 +30,7 @@ type VcStat struct {
 	HostHBAInstances   bool   `toml:"host_hba_instances"`
 	HostNICInstances   bool   `toml:"host_nic_instances"`
 	NetDVSInstances    bool   `toml:"net_dvs_instances"`
+	NetDVPInstances    bool   `toml:"net_dvp_instances"`
 	ctx                context.Context
 	cancel             context.CancelFunc
 	vccache            *cache.Session
@@ -47,6 +50,7 @@ func init() {
 			HostHBAInstances:   false,
 			HostNICInstances:   false,
 			NetDVSInstances:    true,
+			NetDVPInstances:    false,
 		}
 	})
 }
@@ -86,10 +90,10 @@ func (vcs *VcStat) SampleConfig() string {
   vcenter = "https://vcenter.local/sdk"
   username = "user@corp.local"
   password = "secret"
-  insecure_skip_verify = false
+  insecure_skip_verify = true
   cluster_instances = true
   host_instances = true
-  net_dvs_instances = false
+  net_dvs_instances = true
 `
 }
 
@@ -155,40 +159,82 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 
 	//--- Get Hosts info and host devices (hba,nic)
 	if len(dcC.hosts) > 0 {
-		hsC, err := NewHostCollector()
-		if vcs.HostInstances {
-			err = hsC.Collect(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
-			if err != nil && err != context.Canceled {
-				return gatherError(acc, err)
-			}
-			if err == context.Canceled {
-				return nil
-			}
+		err = vcs.gatherHost(c, vcC.dcs, dcC.hosts, acc)
+		if err != nil && err != context.Canceled {
+			return gatherError(acc, err)
 		}
-
-		//--- Get Host HBAs info
-		if vcs.HostHBAInstances && bool(hsC) {
-			err = hsC.CollectHBA(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
-			if err != nil && err != context.Canceled {
-				return gatherError(acc, err)
-			}
-		}
-
-		//--- Get Host NICs info
-		if vcs.HostNICInstances && bool(hsC) {
-			err = hsC.CollectNIC(vcs.ctx, c, vcC.dcs, dcC.hosts, acc)
-			if err != nil && err != context.Canceled {
-				return gatherError(acc, err)
-			}
+		if err == context.Canceled {
+			return nil
 		}
 	}
 
-	//--- Get Network info (Distributed Virtual Switchs at the moment)
-	if vcs.NetDVSInstances && len(dcC.net) > 0 {
-		ntC, err := NewNetCollector()
-		err = ntC.CollectDvs(vcs.ctx, c, vcC.dcs, dcC.net, acc)
+	//--- Get Network instances info
+	if len(dcC.net) > 0 {
+		err = vcs.gatherNetwork(c, vcC.dcs, dcC.net, acc)
 		if err != nil && err != context.Canceled {
 			return gatherError(acc, err)
+		}
+	}
+
+	return nil
+}
+
+// gatherHost gathers host instances info
+func (vcs *VcStat) gatherHost(
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		hsMap map[int][]*object.HostSystem,
+		acc telegraf.Accumulator,
+) error {
+	hsC, err := NewHostCollector()
+	if vcs.HostInstances {
+		err = hsC.Collect(vcs.ctx, client, dcs, hsMap, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	//--- Get Host HBAs info
+	if vcs.HostHBAInstances && bool(hsC) {
+		err = hsC.CollectHBA(vcs.ctx, client, dcs, hsMap, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	//--- Get Host NICs info
+	if vcs.HostNICInstances && bool(hsC) {
+		err = hsC.CollectNIC(vcs.ctx, client, dcs, hsMap, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// gatherNetwork gathers network instances info
+func (vcs *VcStat) gatherNetwork(
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		netMap map[int][]object.NetworkReference,
+		acc telegraf.Accumulator,
+) error {
+	ntC, err := NewNetCollector()
+
+	//--- Get Distributed Virtual Switchs info
+	if vcs.NetDVSInstances {
+		err = ntC.CollectDVS(vcs.ctx, client, dcs, netMap, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	//--- Get Distributed Virtual PortGruoup info
+	if vcs.NetDVPInstances && bool(ntC) {
+		err = ntC.CollectDVP(vcs.ctx, client, dcs, netMap, acc)
+		if err != nil {
+			return err
 		}
 	}
 

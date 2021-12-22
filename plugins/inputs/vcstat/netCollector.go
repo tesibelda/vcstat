@@ -8,6 +8,7 @@ package vcstat
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -26,25 +27,26 @@ func NewNetCollector() (netCollector, error) {
 	return netCollector(true), nil
 }
 
-// Collect gathers DVS info
-func (c *netCollector) CollectDvs(
+// CollectDVS gathers Distributed Virtual Switch info
+func (c *netCollector) CollectDVS(
 		ctx context.Context,
 		client *vim25.Client,
 		dcs []*object.Datacenter,
 		netMap map[int][]object.NetworkReference,
 		acc telegraf.Accumulator,
 ) error {
-	var nets []object.NetworkReference
-	var dvsMo mo.DistributedVirtualSwitch
-	var dvsConfig *(types.DVSConfigInfo)
-	var err error = nil
-	//	var clusterStatusCode int16 = 0
+	var (
+		nets []object.NetworkReference
+		dvsMo mo.DistributedVirtualSwitch
+		dvsConfig *(types.DVSConfigInfo)
+		err error = nil
+	)
 
 	for i, dc := range dcs {
 		nets = netMap[i]
 		for _, net := range nets {
-			if net.Reference().Type == "VmwareDistributedVirtualSwitch" {
-
+			switch net.Reference().Type {
+			case "DistributedVirtualSwitch", "VmwareDistributedVirtualSwitch":
 				dvs, ok := net.(*object.DistributedVirtualSwitch)
 				if !ok {
 					return fmt.Errorf("could not get DVS from networkreference")
@@ -64,13 +66,13 @@ func (c *netCollector) CollectDvs(
 					return fmt.Errorf("coud not get dvs configuration info")
 				}
 
-				dvstags := getDvsTags(
+				dvstags := getDVSTags(
 						client.URL().Host,
 						dc.Name(),
 						dvs.Name(),
 						net.Reference().Value,
 				)
-				dvsfields := getDvsFields(
+				dvsfields := getDVSFields(
 						string(dvsMo.OverallStatus),
 						entityStatusCode(dvsMo.OverallStatus),
 						dvsConfig.NumPorts,
@@ -86,7 +88,62 @@ func (c *netCollector) CollectDvs(
 	return nil
 }
 
-func getDvsTags(vcenter, dcname, dvs, moid string) map[string]string {
+// Collect gathers Distributed Virtual Portgroup info
+func (c *netCollector) CollectDVP(
+		ctx context.Context,
+		client *vim25.Client,
+		dcs []*object.Datacenter,
+		netMap map[int][]object.NetworkReference,
+		acc telegraf.Accumulator,
+) error {
+	var (
+		nets []object.NetworkReference
+		dvpMo mo.DistributedVirtualPortgroup
+		dvpConfig types.DVPortgroupConfigInfo
+		err error = nil
+	)
+
+	for i, dc := range dcs {
+		nets = netMap[i]
+		for _, net := range nets {
+			if net.Reference().Type == "DistributedVirtualPortgroup" {
+				dvp, ok := net.(*object.DistributedVirtualPortgroup)
+				if !ok {
+					return fmt.Errorf("could not get DVP from networkreference")
+				}
+				err = dvp.Properties(
+						ctx, dvp.Reference(),
+						[]string{"config", "overallStatus"},
+						&dvpMo,
+				)
+				if err != nil {
+					*c = false
+					return fmt.Errorf("could not get dvp config property: %w", err)
+				}
+				dvpConfig = dvpMo.Config
+
+				dvptags := getDVPTags(
+						client.URL().Host,
+						dc.Name(),
+						dvp.Name(),
+						net.Reference().Value,
+						strconv.FormatBool(*dvpConfig.Uplink),
+				)
+				dvpfields := getDVPFields(
+						string(dvpMo.OverallStatus),
+						entityStatusCode(dvpMo.OverallStatus),
+						dvpConfig.NumPorts,
+				)
+				acc.AddFields("vcstat_net_dvp", dvpfields, dvptags, time.Now())
+			}
+		}
+	}
+	*c = true
+
+	return nil
+}
+
+func getDVSTags(vcenter, dcname, dvs, moid string) map[string]string {
 	return map[string]string{
 		"vcenter": vcenter,
 		"dcname":  dcname,
@@ -95,7 +152,7 @@ func getDvsTags(vcenter, dcname, dvs, moid string) map[string]string {
 	}
 }
 
-func getDvsFields(
+func getDVSFields(
 		overallstatus string,
 		dvsstatuscode int16,
 		numports, maxports, numsaports int32,
@@ -106,5 +163,27 @@ func getDvsFields(
 		"num_ports":            numports,
 		"max_ports":            maxports,
 		"num_standalone_ports": numsaports,
+	}
+}
+
+func getDVPTags(vcenter, dcname, dvp, moid, uplink string) map[string]string {
+	return map[string]string{
+		"vcenter": vcenter,
+		"dcname":  dcname,
+		"dvp":     dvp,
+		"moid":    moid,
+		"uplink":  uplink,
+	}
+}
+
+func getDVPFields(
+		overallstatus string,
+		dvpstatuscode int16,
+		numports int32,
+) map[string]interface{} {
+	return map[string]interface{}{
+		"status":      overallstatus,
+		"status_code": dvpstatuscode,
+		"num_ports":   numports,
 	}
 }
