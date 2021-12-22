@@ -145,6 +145,7 @@ vcstat_host_nic,dcname=MyDC,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200```
 
+
 # Build Instructions
 
 Download the repo somewhere
@@ -159,9 +160,16 @@ build the "vcstat" binary
  
     go build -o bin\vcstat.exe cmd/main.go
 
+
 # Author
 
-Tesifonte Belda
+Tesifonte Belda (https://github.com/tesibelda)
+
+
+# Contributing
+
+Constructive contributions are welcome.
+
 
 # License
 
