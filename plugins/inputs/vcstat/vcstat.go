@@ -38,6 +38,29 @@ type VCStat struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+var sampleConfig = `
+  ## vCenter URL to be monitored and its credential
+  vcenter = "https://vcenter.local/sdk"
+  username = "user@corp.local"
+  password = "secret"
+  ## Use SSL but skip chain & host verification
+  insecure_skip_verify = false
+
+  #### you may enable or disable data collection per instance type ####
+  ## collect cluster measurements (vcstat_cluster)
+  # cluster_instances = true
+  ## collect host status measurements (vcstat_host)
+  # host_instances = true
+  ## collect host bus adapter measurements (vcstat_host_hba)
+  # host_hba_instances = false
+  ## collect host network interface measurements (vcstat_host_nic)
+  # host_nic_instances = false
+  ## collect network distributed virtual switch measurements (vcstat_net_dvs)
+  # net_dvs_instances = true
+  ## collect network distributed virtual portgroup measurements (vcstat_net_dvp)
+  # net_dvp_instances = false
+`
+
 func init() {
 	inputs.Add("vcstat", func() telegraf.Input {
 		return &VCStat{
@@ -86,15 +109,7 @@ func (vcs *VCStat) Stop() {
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
 func (vcs *VCStat) SampleConfig() string {
-	return `
-  vcenter = "https://vcenter.local/sdk"
-  username = "user@corp.local"
-  password = "secret"
-  insecure_skip_verify = true
-  cluster_instances = true
-  host_instances = true
-  net_dvs_instances = true
-`
+	return sampleConfig
 }
 
 // Description returns a short textual description of the plugin

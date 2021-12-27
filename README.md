@@ -2,6 +2,11 @@
 
 vcstat is a VMware vSphere input plugin for Telegraf that gathers status and basic stats from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down or to know the number of ports used by a Distributed Virtual Switch.
 
+# Compatibility
+
+Realeases are built with a govmomi library version that supports vCenter 6.5, 6.7 and 7.0.
+Use telegraf v1.14 or above so that execd input is available. 
+
 # Configuration
 
 * Download the [latest release package](https://github.com/tesibelda/vcstat/releases/latest) for your platform.
@@ -9,31 +14,50 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
 * Edit vcstat.conf file as needed. Example:
 
 ```toml
-## Gather vSphere vCenter status and basic stats
 [[inputs.vcstat]]
+  ## vCenter URL to be monitored and its credential
   vcenter = "https://vcenter.local/sdk"
   username = "user@corp.local"
   password = "secret"
+  ## Use SSL but skip chain & host verification
   insecure_skip_verify = false
 
-  ## you may enable or disable data collection per instance type
-  cluster_instances = true
-  host_instances = true
+  #### you may enable or disable data collection per instance type ####
+  ## collect cluster measurements (vcstat_cluster)
+  # cluster_instances = true
+  ## collect host status measurements (vcstat_host)
+  # host_instances = true
+  ## collect host bus adapter measurements (vcstat_host_hba)
   # host_hba_instances = false
+  ## collect host network interface measurements (vcstat_host_nic)
   # host_nic_instances = false
-  net_dvs_instances = true
+  ## collect network distributed virtual switch measurements (vcstat_net_dvs)
+  # net_dvs_instances = true
+  ## collect network distributed virtual portgroup measurements (vcstat_net_dvp)
   # net_dvp_instances = false
 ```
 
 * Edit telegraf's execd input configuration as needed. Example:
 
 ```
+## Gather vSphere vCenter status and basic stats
 [[inputs.execd]]
   command = ["/path/to/vcstat_binary", "-config", "/path/to/vcstat.conf"]
   signal = "none"
 ```
 
 * Restart or reload Telegraf.
+
+# Quick test in your environment
+
+* Edit vcstat.conf file as needed (see above)
+
+* Run vcstat with -config argument using that file.
+```
+/path/to/vcstat -config /path/to/vcstat.conf
+```
+
+* Wait for 1 minute or press enter. You should see lines like those in the Example output below.
 
 # Metrics
 
@@ -109,7 +133,7 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
 	- duplex (string)
 	- speed (int)
 	- mac (string)
-- vcstat_net_dvs           <- Distributed Virtual Switch
+- vcstat_net_dvs
   - tags:
     - dvs
 	- moid
@@ -121,7 +145,7 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
     - num_ports (int)
     - max_ports (int)
     - num_standalone_ports (int)
-- vcstat_net_dvp           <- Distributed Virtual Portgroup
+- vcstat_net_dvp
   - tags:
     - dvp
 	- moid
@@ -146,7 +170,6 @@ vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200
 ```
 
-
 # Build Instructions
 
 Download the repo somewhere
@@ -161,16 +184,13 @@ build the "vcstat" binary
  
     go build -o bin\vcstat.exe cmd/main.go
 
-
 # Author
 
 Tesifonte Belda (https://github.com/tesibelda)
 
-
 # Contributing
 
 Constructive contributions are welcome.
-
 
 # License
 
