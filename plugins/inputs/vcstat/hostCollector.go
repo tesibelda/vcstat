@@ -1,4 +1,4 @@
-// hostCollector gathers stats at host level
+// hostCollector include functions to gather stats at host level
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
@@ -18,27 +18,19 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 )
 
-// hostCollector type indicates succesfull host collection or not
-type hostCollector bool
-
-// NewHsCollector returns a new Collector exposing host stats.
-func NewHostCollector() (hostCollector, error) {
-	return hostCollector(true), nil
-}
-
-// Collect gathers host info
-func (c *hostCollector) Collect(
-		ctx context.Context,
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		hsMap map[int][]*object.HostSystem,
-		acc telegraf.Accumulator,
+// collectHostInfo gathers host info
+func collectHostInfo(
+	ctx context.Context,
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	hsMap map[int][]*object.HostSystem,
+	acc telegraf.Accumulator,
 ) error {
 	var (
-		hosts []*object.HostSystem
-		hsMo mo.HostSystem
-		err error = nil
-		hsCode, hsConnectionCode int16 = 0, 0
+		hosts                    []*object.HostSystem
+		hsMo                     mo.HostSystem
+		err                      error
+		hsCode, hsConnectionCode int16
 	)
 
 	for i, dc := range dcs {
@@ -46,41 +38,39 @@ func (c *hostCollector) Collect(
 		for _, host := range hosts {
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
-				*c = false
 				return fmt.Errorf("could not get host summary property: %w", err)
 			}
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
 			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
 
 			hstags := getHostTags(
-					client.URL().Host,
-					dc.Name(),
-					host.Name(),
-					host.Reference().Value,
+				client.URL().Host,
+				dc.Name(),
+				host.Name(),
+				host.Reference().Value,
 			)
 			hsfields := getHostFields(
-					string(hsMo.Summary.OverallStatus),
-					hsCode,
-					hsMo.Summary.RebootRequired,
-					hsMo.Summary.Runtime.InMaintenanceMode,
-					string(hsMo.Summary.Runtime.ConnectionState),
-					hsConnectionCode,
+				string(hsMo.Summary.OverallStatus),
+				hsCode,
+				hsMo.Summary.RebootRequired,
+				hsMo.Summary.Runtime.InMaintenanceMode,
+				string(hsMo.Summary.Runtime.ConnectionState),
+				hsConnectionCode,
 			)
 			acc.AddFields("vcstat_host", hsfields, hstags, time.Now())
 		}
 	}
-	*c = true
 
 	return nil
 }
 
-// CollectHBA gathers host HBA info (like govc: storage core adapter list)
-func (c *hostCollector) CollectHBA(
-		ctx context.Context,
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		hsMap map[int][]*object.HostSystem,
-		acc telegraf.Accumulator,
+// collectHostHBA gathers host HBA info (like govc: storage core adapter list)
+func collectHostHBA(
+	ctx context.Context,
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	hsMap map[int][]*object.HostSystem,
+	acc telegraf.Accumulator,
 ) error {
 	var hosts []*object.HostSystem
 
@@ -124,13 +114,13 @@ func (c *hostCollector) CollectHBA(
 	return nil
 }
 
-// CollectNIC gathers host NIC info (like govc: host.esxcli network nic list)
-func (c *hostCollector) CollectNIC(
-		ctx context.Context,
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		hsMap map[int][]*object.HostSystem,
-		acc telegraf.Accumulator,
+// collectHostNIC gathers host NIC info (like govc: host.esxcli network nic list)
+func collectHostNIC(
+	ctx context.Context,
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	hsMap map[int][]*object.HostSystem,
+	acc telegraf.Accumulator,
 ) error {
 	var hosts []*object.HostSystem
 
@@ -184,11 +174,11 @@ func getHostTags(vcenter, dcname, hostname, moid string) map[string]string {
 }
 
 func getHostFields(
-		overallstatus string,
-		hoststatuscode int16,
-		rebootrequired, inmaintenancemode bool,
-		connectionstate string,
-		connectionstatecode int16,
+	overallstatus string,
+	hoststatuscode int16,
+	rebootrequired, inmaintenancemode bool,
+	connectionstate string,
+	connectionstatecode int16,
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"status":                overallstatus,
@@ -228,9 +218,9 @@ func getNicTags(vcenter, dcname, hostname, nic, driver string) map[string]string
 }
 
 func getNicFields(
-		status string,
-		statuscode int16,
-		adminstatus, duplex, speed, mac string,
+	status string,
+	statuscode int16,
+	adminstatus, duplex, speed, mac string,
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"admin_status":     adminstatus,
@@ -246,13 +236,13 @@ func getNicFields(
 // for easy alerting from telegraf metrics
 func hbaLinkStateCode(state string) int16 {
 	switch state {
-	case "link-up","online":
+	case "link-up", "online":
 		return 0
 	case "link-n/a":
 		return 1
 	case "unbound":
 		return 1
-	case "link-down","offline":
+	case "link-down", "offline":
 		return 3
 	default:
 		return 1

@@ -20,31 +20,37 @@ import (
 
 // dcCollector struct contains kid resources for a Datacenter
 type dcCollector struct {
+	dcs      []*object.Datacenter
 	clusters map[int][]*object.ClusterComputeResource
 	hosts    map[int][]*object.HostSystem
-	net      map[int][]object.NetworkReference
+	nets     map[int][]object.NetworkReference
 }
 
 // NewDCCollector returns a new Collector exposing Datacenter stats.
-func NewDCCollector() (dcCollector, error) {
+func NewDCCollector(dcs []*object.Datacenter) (dcCollector, error) {
 	res := dcCollector{
+		dcs:      dcs,
 		clusters: make(map[int][]*object.ClusterComputeResource),
 		hosts:    make(map[int][]*object.HostSystem),
-		net:      make(map[int][]object.NetworkReference),
+		nets:     make(map[int][]object.NetworkReference),
 	}
+
 	return res, nil
 }
 
-// Discover gets clusters and hosts of each datacenter
-func (c *dcCollector) Discover(
-		ctx context.Context,
-		client *vim25.Client,
-		dcs []*object.Datacenter,
+// Collect gathers datacenter info
+func (c *dcCollector) Collect(
+	ctx context.Context,
+	client *vim25.Client,
+	acc telegraf.Accumulator,
 ) error {
-	var err error = nil
+	var (
+		err error
+		dcMo mo.Datacenter
+	)
 
 	finder := find.NewFinder(client, false)
-	for i, dc := range dcs {
+	for i, dc := range c.dcs {
 		finder.SetDatacenter(dc)
 
 		// clusters
@@ -60,26 +66,12 @@ func (c *dcCollector) Discover(
 		}
 
 		// networks (dvs,dvp,..)
-		c.net[i], err = finder.NetworkList(ctx, "*")
+		c.nets[i], err = finder.NetworkList(ctx, "*")
 		if err != nil {
 			return fmt.Errorf("could not get datacenter network list %w", err)
 		}
-	}
-	return nil
-}
 
-// Collect gathers datacenter info
-func (c *dcCollector) Collect(
-		ctx context.Context,
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		acc telegraf.Accumulator,
-) error {
-	var err error = nil
-
-	for i, dc := range dcs {
 		// Datacenter info (ref: https://github.com/vmware/govmomi/blob/master/govc/datacenter/info.go)
-		var dcMo mo.Datacenter
 		err = dc.Properties(ctx, dc.Reference(), []string{"datastore", "network"}, &dcMo)
 		if err != nil {
 			return err
@@ -87,10 +79,10 @@ func (c *dcCollector) Collect(
 
 		dctags := getDcTags(client.URL().Host, dc.Name(), dc.Reference().Value)
 		dcfields := getDcFields(
-				len(c.clusters[i]),
-				len(c.hosts[i]),
-				len(dcMo.Network),
-				len(dcMo.Datastore),
+			len(c.clusters[i]),
+			len(c.hosts[i]),
+			len(dcMo.Network),
+			len(dcMo.Datastore),
 		)
 		acc.AddFields("vcstat_datacenter", dcfields, dctags, time.Now())
 	}

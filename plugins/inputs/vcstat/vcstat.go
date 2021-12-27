@@ -20,7 +20,7 @@ import (
 	"github.com/vmware/govmomi/vim25/soap"
 )
 
-type VcStat struct {
+type VCStat struct {
 	VCenter            string `toml:"vcenter"`
 	Username           string `toml:"username"`
 	Password           string `toml:"password"`
@@ -40,7 +40,7 @@ type VcStat struct {
 
 func init() {
 	inputs.Add("vcstat", func() telegraf.Input {
-		return &VcStat{
+		return &VCStat{
 			VCenter:            "https://vcenter.local/sdk",
 			Username:           "user@corp.local",
 			Password:           "secret",
@@ -55,7 +55,7 @@ func init() {
 	})
 }
 
-func (vcs *VcStat) Init() error {
+func (vcs *VCStat) Init() error {
 	vcs.ctx, vcs.cancel = context.WithCancel(context.Background())
 
 	// Create a vSphere vCenter client
@@ -63,7 +63,7 @@ func (vcs *VcStat) Init() error {
 	if err != nil {
 		return fmt.Errorf("Error parsing url for vcenter: %w", err)
 	}
-	if u==nil {
+	if u == nil {
 		return fmt.Errorf("Error parsing url for vcenter: returned nil")
 	}
 	u.User = url.UserPassword(vcs.Username, vcs.Password)
@@ -79,13 +79,13 @@ func (vcs *VcStat) Init() error {
 
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
-func (vcs *VcStat) Stop() {
+func (vcs *VCStat) Stop() {
 	vcs.cancel()
 }
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
-func (vcs *VcStat) SampleConfig() string {
+func (vcs *VCStat) SampleConfig() string {
 	return `
   vcenter = "https://vcenter.local/sdk"
   username = "user@corp.local"
@@ -98,17 +98,17 @@ func (vcs *VcStat) SampleConfig() string {
 }
 
 // Description returns a short textual description of the plugin
-func (vcs *VcStat) Description() string {
+func (vcs *VCStat) Description() string {
 	return "Gathers vSphere vCenter status and basic stats"
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
-func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
-	var err error = nil
+func (vcs *VCStat) Gather(acc telegraf.Accumulator) error {
+	var err error
 
 	//--- re-Init if needed
-	if vcs.ctx == nil || vcs.ctx.Err()!=nil || vcs.vccache == nil || vcs.vccache.URL == nil {
+	if vcs.ctx == nil || vcs.ctx.Err() != nil || vcs.vccache == nil || vcs.vccache.URL == nil {
 		err = vcs.Init()
 		if err != nil {
 			return gatherError(acc, err)
@@ -120,91 +120,71 @@ func (vcs *VcStat) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return gatherError(acc, err)
 	}
+	defer cli.Logout(vcs.ctx)
 	if !cli.IsVC() {
 		return gatherError(acc, fmt.Errorf("Error endpoint does not look like a vCenter"))
 	}
-	defer cli.Logout(vcs.ctx)
-	c := cli.Client
 
 	//--- Get vCenter basic stats
 	vcC, err := NewVCCollector()
-	err = vcC.Collect(vcs.ctx, c, acc)
-	if err != nil && err != context.Canceled {
-		// No need to signal errors if we were merely canceled.
+	err = vcC.Collect(vcs.ctx, cli.Client, acc)
+	if err != nil {
 		return gatherError(acc, err)
 	}
 
-	//--- Get Datacenters info and discovery of Dc instances
-	dcC, err := NewDCCollector()
-	err = dcC.Discover(vcs.ctx, c, vcC.dcs)
-	if err != nil && err != context.Canceled {
+	//--- Get Datacenters info
+	dcC, err := NewDCCollector(vcC.dcs)
+	err = dcC.Collect(vcs.ctx, cli.Client, acc)
+	if err != nil {
 		return gatherError(acc, err)
-	}
-	err = dcC.Collect(vcs.ctx, c, vcC.dcs, acc)
-	if err != nil && err != context.Canceled {
-		return gatherError(acc, err)
-	}
-	if err == context.Canceled {
-		return nil
 	}
 
 	//--- Get Clusters info
 	if vcs.ClusterInstances && len(dcC.clusters) > 0 {
-		clC, err := NewClusterCollector()
-		err = clC.Collect(vcs.ctx, c, vcC.dcs, dcC.clusters, acc)
-		if err != nil && err != context.Canceled {
+		err = collectCluster(vcs.ctx, cli.Client, vcC.dcs, dcC.clusters, acc)
+		if err != nil {
 			return gatherError(acc, err)
 		}
 	}
 
-	//--- Get Hosts info and host devices (hba,nic)
-	if len(dcC.hosts) > 0 {
-		err = vcs.gatherHost(c, vcC.dcs, dcC.hosts, acc)
-		if err != nil && err != context.Canceled {
-			return gatherError(acc, err)
-		}
-		if err == context.Canceled {
-			return nil
-		}
+	//--- Get Hosts, Network,... info
+	err = vcs.gatherHost(cli.Client, vcC.dcs, dcC.hosts, acc)
+	if err != nil {
+		return gatherError(acc, err)
 	}
-
-	//--- Get Network instances info
-	if len(dcC.net) > 0 {
-		err = vcs.gatherNetwork(c, vcC.dcs, dcC.net, acc)
-		if err != nil && err != context.Canceled {
-			return gatherError(acc, err)
-		}
+	err = vcs.gatherNetwork(cli.Client, vcC.dcs, dcC.nets, acc)
+	if err != nil {
+		return gatherError(acc, err)
 	}
 
 	return nil
 }
 
-// gatherHost gathers host instances info
-func (vcs *VcStat) gatherHost(
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		hsMap map[int][]*object.HostSystem,
-		acc telegraf.Accumulator,
+// gatherHost gathers info and stats per host
+func (vcs *VCStat) gatherHost(
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	hsMap map[int][]*object.HostSystem,
+	acc telegraf.Accumulator,
 ) error {
-	hsC, err := NewHostCollector()
+	var err error
+
 	if vcs.HostInstances {
-		err = hsC.Collect(vcs.ctx, client, dcs, hsMap, acc)
+		err = collectHostInfo(vcs.ctx, client, dcs, hsMap, acc)
 		if err != nil {
 			return err
 		}
 	}
 
-	//--- Get Host HBAs info
-	if vcs.HostHBAInstances && bool(hsC) {
-		err = hsC.CollectHBA(vcs.ctx, client, dcs, hsMap, acc)
+	if vcs.HostHBAInstances {
+		err = collectHostHBA(vcs.ctx, client, dcs, hsMap, acc)
 		if err != nil {
 			return err
 		}
 	}
 
-	//--- Get Host NICs info
-	if vcs.HostNICInstances && bool(hsC) {
-		err = hsC.CollectNIC(vcs.ctx, client, dcs, hsMap, acc)
+	if vcs.HostNICInstances {
+		err = collectHostNIC(vcs.ctx, client, dcs, hsMap, acc)
 		if err != nil {
 			return err
 		}
@@ -214,25 +194,23 @@ func (vcs *VcStat) gatherHost(
 }
 
 // gatherNetwork gathers network instances info
-func (vcs *VcStat) gatherNetwork(
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		netMap map[int][]object.NetworkReference,
-		acc telegraf.Accumulator,
+func (vcs *VCStat) gatherNetwork(
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	netMap map[int][]object.NetworkReference,
+	acc telegraf.Accumulator,
 ) error {
-	ntC, err := NewNetCollector()
+	var err error
 
-	//--- Get Distributed Virtual Switchs info
 	if vcs.NetDVSInstances {
-		err = ntC.CollectDVS(vcs.ctx, client, dcs, netMap, acc)
+		err = collectNetDVS(vcs.ctx, client, dcs, netMap, acc)
 		if err != nil {
 			return err
 		}
 	}
 
-	//--- Get Distributed Virtual PortGruoup info
-	if vcs.NetDVPInstances && bool(ntC) {
-		err = ntC.CollectDVP(vcs.ctx, client, dcs, netMap, acc)
+	if vcs.NetDVPInstances {
+		err = collectNetDVP(vcs.ctx, client, dcs, netMap, acc)
 		if err != nil {
 			return err
 		}
@@ -243,6 +221,10 @@ func (vcs *VcStat) gatherNetwork(
 
 // gatherError returns the error and adds it to the telegraf accumulator
 func gatherError(acc telegraf.Accumulator, err error) error {
+	// No need to signal errors if we were merely canceled.
+	if err == context.Canceled {
+		return nil
+	}
 	if err != nil {
 		acc.AddError(err)
 	}

@@ -1,4 +1,4 @@
-// clusterCollector gathers stats at cluster level
+// clusterCollector include functions to gather stats at cluster level
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
@@ -18,28 +18,20 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-// clusterCollector type indicates succesfull cluster collection or not
-type clusterCollector bool
-
-// NewClCollector returns a new Collector exposing cluster stats.
-func NewClusterCollector() (clusterCollector, error) {
-	return clusterCollector(true), nil
-}
-
-// Collect gathers cluster info
-func (c *clusterCollector) Collect(
-		ctx context.Context,
-		client *vim25.Client,
-		dcs []*object.Datacenter,
-		clMap map[int][]*object.ClusterComputeResource,
-		acc telegraf.Accumulator,
+// collectCluster gathers cluster info
+func collectCluster(
+	ctx context.Context,
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	clMap map[int][]*object.ClusterComputeResource,
+	acc telegraf.Accumulator,
 ) error {
 	var (
-		clusters []*object.ClusterComputeResource
-		clMo mo.ClusterComputeResource
-		resourceSum *(types.ComputeResourceSummary)
-		err error = nil
-		clusterStatusCode int16 = 0
+		clusters          []*object.ClusterComputeResource
+		clMo              mo.ClusterComputeResource
+		resourceSum       *(types.ComputeResourceSummary)
+		err               error
+		clusterStatusCode int16
 	)
 
 	for i, dc := range dcs {
@@ -47,38 +39,35 @@ func (c *clusterCollector) Collect(
 		for _, cluster := range clusters {
 			err = cluster.Properties(ctx, cluster.Reference(), []string{"summary"}, &clMo)
 			if err != nil {
-				*c = false
 				return err
 			}
 			resourceSum = clMo.Summary.GetComputeResourceSummary()
 			if resourceSum == nil {
-				*c = false
 				return fmt.Errorf("coud not get cluster resource summary")
 			}
 			clusterStatusCode = entityStatusCode(resourceSum.OverallStatus)
 
 			cltags := getClusterTags(
-					client.URL().Host,
-					dc.Name(),
-					cluster.Name(),
-					cluster.Reference().Value,
+				client.URL().Host,
+				dc.Name(),
+				cluster.Name(),
+				cluster.Reference().Value,
 			)
 			clfields := getClusterFields(
-					string(resourceSum.OverallStatus),
-					clusterStatusCode,
-					resourceSum.NumHosts,
-					resourceSum.NumEffectiveHosts,
-					resourceSum.NumCpuCores,
-					resourceSum.NumCpuThreads,
-					int(resourceSum.TotalCpu),
-					int(resourceSum.TotalMemory),
-					int(resourceSum.EffectiveCpu),
-					int(resourceSum.EffectiveMemory),
+				string(resourceSum.OverallStatus),
+				clusterStatusCode,
+				resourceSum.NumHosts,
+				resourceSum.NumEffectiveHosts,
+				resourceSum.NumCpuCores,
+				resourceSum.NumCpuThreads,
+				int(resourceSum.TotalCpu),
+				int(resourceSum.TotalMemory),
+				int(resourceSum.EffectiveCpu),
+				int(resourceSum.EffectiveMemory),
 			)
 			acc.AddFields("vcstat_cluster", clfields, cltags, time.Now())
 		}
 	}
-	*c = true
 
 	return nil
 }
@@ -93,11 +82,11 @@ func getClusterTags(vcenter, dcname, clustername, moid string) map[string]string
 }
 
 func getClusterFields(
-		overallstatus string,
-		clusterstatuscode int16,
-		numhosts, numeffectivehosts int32,
-		numcpucores, numcputhreads int16,
-		totalcpu, totalmemory, effectivecpu, effectivememory int,
+	overallstatus string,
+	clusterstatuscode int16,
+	numhosts, numeffectivehosts int32,
+	numcpucores, numcputhreads int16,
+	totalcpu, totalmemory, effectivecpu, effectivememory int,
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"status":              overallstatus,
