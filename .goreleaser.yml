@@ -21,6 +21,8 @@ archives:
   - format_overrides: &overrides
       - goos: windows
         format: zip
+    files:
+      - etc/vcstat.conf
 checksum:
   name_template: 'checksums.txt'
 snapshot:
