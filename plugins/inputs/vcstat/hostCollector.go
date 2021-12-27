@@ -89,7 +89,7 @@ func collectHostHBA(
 			if len(res.Values) > 0 {
 				var keys []string
 				for key := range res.Values[0] {
-					keys = append(keys, key)
+					keys = append(keys, key) //nolint
 				}
 				for _, rv := range res.Values {
 					hbatags := getHbaTags(
@@ -139,7 +139,7 @@ func collectHostNIC(
 			if len(res.Values) > 0 {
 				var keys []string
 				for key := range res.Values[0] {
-					keys = append(keys, key)
+					keys = append(keys, key) //nolint
 				}
 				for _, rv := range res.Values {
 					nictags := getNicTags(

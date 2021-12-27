@@ -31,11 +31,11 @@ func NewVCCollector() (vcCollector, error) {
 
 // Collect gathers basic vcenter info
 func (c *vcCollector) Collect(
-		ctx context.Context,
-		client *vim25.Client,
-		acc telegraf.Accumulator,
+	ctx context.Context,
+	client *vim25.Client,
+	acc telegraf.Accumulator,
 ) error {
-	var err error = nil
+	var err error
 	finder := find.NewFinder(client, false)
 	c.dcs, err = finder.DatacenterList(ctx, "*")
 	if err != nil {
@@ -45,11 +45,11 @@ func (c *vcCollector) Collect(
 	// vCenter info
 	vctags := getVcenterTags(client.URL().Host)
 	vcfields := getVcenterFields(
-			client.ServiceContent.About.Version,
-			string(client.ServiceContent.About.Build),
-			client.ServiceContent.About.Name,
-			client.ServiceContent.About.OsType,
-			len(c.dcs),
+		client.ServiceContent.About.Version,
+		string(client.ServiceContent.About.Build),
+		client.ServiceContent.About.Name,
+		client.ServiceContent.About.OsType,
+		len(c.dcs),
 	)
 	acc.AddFields("vcstat_vcenter", vcfields, vctags, time.Now())
 
@@ -63,8 +63,8 @@ func getVcenterTags(vcenter string) map[string]string {
 }
 
 func getVcenterFields(
-		version, build, name, ostype string,
-		numdcs int,
+	version, build, name, ostype string,
+	numdcs int,
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"build":           build,

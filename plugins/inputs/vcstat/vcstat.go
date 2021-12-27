@@ -120,20 +120,20 @@ func (vcs *VCStat) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return gatherError(acc, err)
 	}
-	defer cli.Logout(vcs.ctx)
+	defer cli.Logout(vcs.ctx) //nolint   //no need for logout error checking
 	if !cli.IsVC() {
 		return gatherError(acc, fmt.Errorf("Error endpoint does not look like a vCenter"))
 	}
 
 	//--- Get vCenter basic stats
-	vcC, err := NewVCCollector()
+	vcC, _ := NewVCCollector() //err is always nil here
 	err = vcC.Collect(vcs.ctx, cli.Client, acc)
 	if err != nil {
 		return gatherError(acc, err)
 	}
 
 	//--- Get Datacenters info
-	dcC, err := NewDCCollector(vcC.dcs)
+	dcC, _ := NewDCCollector(vcC.dcs) //err is always nil here
 	err = dcC.Collect(vcs.ctx, cli.Client, acc)
 	if err != nil {
 		return gatherError(acc, err)
