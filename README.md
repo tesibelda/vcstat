@@ -4,7 +4,7 @@ vcstat is a VMware vSphere input plugin for Telegraf that gathers status and bas
 
 # Compatibility
 
-As of January 2022, realeases are built with a govmomi library version that supports vCenter 6.5, 6.7 and 7.0.
+Current releases are built with a govmomi library version that supports vCenter 6.5, 6.7 and 7.0.
 Use telegraf v1.14 or above so that execd input is available. 
 
 # Configuration
