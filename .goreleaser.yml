@@ -22,6 +22,8 @@ archives:
       - goos: windows
         format: zip
     files:
+      - LICENSE
+      - README.md
       - etc/vcstat.conf
 checksum:
   name_template: 'checksums.txt'
