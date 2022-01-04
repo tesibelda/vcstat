@@ -8,6 +8,7 @@ package vcstat
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -164,6 +165,47 @@ func collectHostNIC(
 	return nil
 }
 
+// collectHostFw gathers host Firewall info (like govc: host.esxcli network firewall get)
+func collectHostFw(
+	ctx context.Context,
+	client *vim25.Client,
+	dcs []*object.Datacenter,
+	hsMap map[int][]*object.HostSystem,
+	acc telegraf.Accumulator,
+) error {
+	var hosts []*object.HostSystem
+
+	for i, dc := range dcs {
+		hosts = hsMap[i]
+		for _, host := range hosts {
+			x, err := esxcli.NewExecutor(client, host)
+			if err != nil {
+				return fmt.Errorf("could not get esxcli executor for host %s: %w", host, err)
+			}
+			res, err := x.Run([]string{"network", "firewall", "get"})
+			if err != nil {
+				return err
+			}
+
+			if len(res.Values) > 0 {
+				fwtags := getFirewallTags(client.URL().Host, dc.Name(), host.Name())
+				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
+				if err != nil {
+					return fmt.Errorf("could not parse firewall info for host %s: %w", host, err)
+				}
+				loaded, err := strconv.ParseBool(res.Values[0]["Loaded"][0])
+				if err != nil {
+					return fmt.Errorf("could not parse firewall info for host %s: %w", host, err)
+				}
+				fwfields := getFirewallFields(res.Values[0]["DefaultAction"][0], enabled, loaded)
+				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, time.Now())
+			}
+		}
+	}
+
+	return nil
+}
+
 func getHostTags(vcenter, dcname, hostname, moid string) map[string]string {
 	return map[string]string{
 		"vcenter":     vcenter,
@@ -261,5 +303,21 @@ func nicLinkStatusCode(state string) int16 {
 		return 2
 	default:
 		return 1
+	}
+}
+
+func getFirewallTags(vcenter, dcname, hostname string) map[string]string {
+	return map[string]string{
+		"vcenter":     vcenter,
+		"dcname":      dcname,
+		"esxhostname": hostname,
+	}
+}
+
+func getFirewallFields(defaultaction string, enabled, loaded bool) map[string]interface{} {
+	return map[string]interface{}{
+		"defaultaction": defaultaction,
+		"enabled":       enabled,
+		"loaded":        loaded,
 	}
 }

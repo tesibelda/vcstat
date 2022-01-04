@@ -29,6 +29,7 @@ type VCStat struct {
 	HostInstances      bool   `toml:"host_instances"`
 	HostHBAInstances   bool   `toml:"host_hba_instances"`
 	HostNICInstances   bool   `toml:"host_nic_instances"`
+	HostFwInstances    bool   `toml:"host_firewall_instances"`
 	NetDVSInstances    bool   `toml:"net_dvs_instances"`
 	NetDVPInstances    bool   `toml:"net_dvp_instances"`
 	ctx                context.Context
@@ -51,6 +52,8 @@ var sampleConfig = `
   # cluster_instances = true
   ## collect host status measurements (vcstat_host)
   # host_instances = true
+  ## collect host firewall measurement (vcstat_host_firewall)
+  # host_firewall_instances = false
   ## collect host bus adapter measurements (vcstat_host_hba)
   # host_hba_instances = false
   ## collect host network interface measurements (vcstat_host_nic)
@@ -70,6 +73,7 @@ func init() {
 			InsecureSkipVerify: true,
 			ClusterInstances:   true,
 			HostInstances:      true,
+			HostFwInstances:    false,
 			HostHBAInstances:   false,
 			HostNICInstances:   false,
 			NetDVSInstances:    true,
@@ -200,6 +204,13 @@ func (vcs *VCStat) gatherHost(
 
 	if vcs.HostNICInstances {
 		err = collectHostNIC(vcs.ctx, client, dcs, hsMap, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	if vcs.HostFwInstances {
+		err = collectHostFw(vcs.ctx, client, dcs, hsMap, acc)
 		if err != nil {
 			return err
 		}
