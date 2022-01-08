@@ -45,7 +45,7 @@ func (c *dcCollector) Collect(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		err error
+		err  error
 		dcMo mo.Datacenter
 	)
 

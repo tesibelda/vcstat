@@ -32,7 +32,7 @@ func main() {
 
 	// create the shim. This is what will run your plugins.
 	shim := shim.New()
-	if shim==nil {
+	if shim == nil {
 		fmt.Fprintf(os.Stderr, "Error creating telegraf shim\n")
 		os.Exit(1)
 	}
