@@ -1,4 +1,5 @@
-// netCollector include functions to gather stats at network level (like Distributed Virtual Switchs)
+// netCollector include functions to gather stats at network level
+//  (like Distributed Virtual Switches)
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
