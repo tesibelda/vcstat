@@ -20,7 +20,7 @@ import (
 	"github.com/vmware/govmomi/vim25/soap"
 )
 
-type VCStat struct {
+type vcstatConfig struct {
 	VCenter            string `toml:"vcenter"`
 	Username           string `toml:"username"`
 	Password           string `toml:"password"`
@@ -66,7 +66,7 @@ var sampleConfig = `
 
 func init() {
 	inputs.Add("vcstat", func() telegraf.Input {
-		return &VCStat{
+		return &vcstatConfig{
 			VCenter:            "https://vcenter.local/sdk",
 			Username:           "user@corp.local",
 			Password:           "secret",
@@ -82,7 +82,8 @@ func init() {
 	})
 }
 
-func (vcs *VCStat) Init() error {
+// Init initializes internal vcstat variables with the provided configuration
+func (vcs *vcstatConfig) Init() error {
 	vcs.ctx, vcs.cancel = context.WithCancel(context.Background())
 
 	// Create a vSphere vCenter client
@@ -106,24 +107,24 @@ func (vcs *VCStat) Init() error {
 
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
-func (vcs *VCStat) Stop() {
+func (vcs *vcstatConfig) Stop() {
 	vcs.cancel()
 }
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
-func (vcs *VCStat) SampleConfig() string {
+func (vcs *vcstatConfig) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns a short textual description of the plugin
-func (vcs *VCStat) Description() string {
+func (vcs *vcstatConfig) Description() string {
 	return "Gathers vSphere vCenter status and basic stats"
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
-func (vcs *VCStat) Gather(acc telegraf.Accumulator) error {
+func (vcs *vcstatConfig) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	//--- re-Init if needed
@@ -180,7 +181,7 @@ func (vcs *VCStat) Gather(acc telegraf.Accumulator) error {
 }
 
 // gatherHost gathers info and stats per host
-func (vcs *VCStat) gatherHost(
+func (vcs *vcstatConfig) gatherHost(
 	client *vim25.Client,
 	dcs []*object.Datacenter,
 	hsMap map[int][]*object.HostSystem,
@@ -220,7 +221,7 @@ func (vcs *VCStat) gatherHost(
 }
 
 // gatherNetwork gathers network instances info
-func (vcs *VCStat) gatherNetwork(
+func (vcs *vcstatConfig) gatherNetwork(
 	client *vim25.Client,
 	dcs []*object.Datacenter,
 	netMap map[int][]object.NetworkReference,

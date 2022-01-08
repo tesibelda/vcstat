@@ -21,7 +21,7 @@ type vcCollector struct {
 	dcs []*object.Datacenter
 }
 
-// NewVcCollector returns a new Collector exposing vCenter level stats
+// NewVCCollector returns a new Collector exposing vCenter level stats
 func NewVCCollector() (vcCollector, error) {
 	res := vcCollector{
 		dcs: nil,

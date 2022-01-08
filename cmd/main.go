@@ -1,5 +1,5 @@
-// vcstat main package is a telegraf shim that allows vcstat to work as an execd input plugin
-//  so you can monitor vCenter status and basic stats
+// vcstat main package is a telegraf shim that allows vcstat to work as an execd input
+//  plugin so you can monitor vCenter status and basic stats
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
@@ -16,9 +16,15 @@ import (
 	_ "github.com/tesibelda/vcstat/plugins/inputs/vcstat"
 )
 
-var pollInterval = flag.Duration("poll_interval", 60*time.Second, "how often to send metrics (default 1m)")
+var pollInterval = flag.Duration(
+	"poll_interval",
+	60*time.Second,
+	"how often to send metrics (default 1m)",
+)
 var configFile = flag.String("config", "", "path to the config file for this plugin")
 var showVersion = flag.Bool("version", false, "show vcstat version and exit")
+
+// Version cotains the actual version of vcstat
 var Version string = ""
 var err error
 
