@@ -1,6 +1,6 @@
 # Telegraf execd vcstat input
 
-vcstat is a VMware vSphere input plugin for Telegraf that gathers status and basic stats from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down or to know the number of ports used by a Distributed Virtual Switch.
+vcstat is a VMware vSphere input plugin for [Telegraf](https://github.com/influxdata/telegraf) that gathers status and basic stats from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down or to know the number of ports used by a Distributed Virtual Switch.
 
 # Compatibility
 
@@ -200,9 +200,17 @@ build the "vcstat" binary
 
 Tesifonte Belda (https://github.com/tesibelda)
 
-# Contributing
+# Support and assitance
 
-Constructive contributions are welcome.
+Reach out to the maintainer at one of the following places:
+
+- [GitHub issues](https://github.com/tesibelda/vcstat/issues)
+- Contact options listed on this GitHub profile
+
+If you want to say **thank you** or/and support active development of vcstat:
+
+- Add a [GitHub Star](https://github.com/tesibelda/vcstat) to the project.
+- Write interesting articles about the project on [Dev.to](https://dev.to/), [Medium](https://medium.com/) or your personal blog.
 
 # License
 
