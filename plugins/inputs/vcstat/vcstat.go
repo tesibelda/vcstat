@@ -26,6 +26,7 @@ type vcstatConfig struct {
 	Password           string `toml:"password"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ClusterInstances   bool   `toml:"cluster_instances"`
+	DatastoreInstances bool   `toml:"datastore_instances"`
 	HostInstances      bool   `toml:"host_instances"`
 	HostHBAInstances   bool   `toml:"host_hba_instances"`
 	HostNICInstances   bool   `toml:"host_nic_instances"`
@@ -50,6 +51,8 @@ var sampleConfig = `
   #### you may enable or disable data collection per instance type ####
   ## collect cluster measurements (vcstat_cluster)
   # cluster_instances = true
+  ## collect datastore measurement (vcstat_datastore)
+  # datastore_instances = false
   ## collect host status measurements (vcstat_host)
   # host_instances = true
   ## collect host firewall measurement (vcstat_host_firewall)
@@ -72,6 +75,7 @@ func init() {
 			Password:           "secret",
 			InsecureSkipVerify: true,
 			ClusterInstances:   true,
+			DatastoreInstances: false,
 			HostInstances:      true,
 			HostFwInstances:    false,
 			HostHBAInstances:   false,
@@ -175,6 +179,14 @@ func (vcs *vcstatConfig) Gather(acc telegraf.Accumulator) error {
 	err = vcs.gatherNetwork(cli.Client, vcC.dcs, dcC.nets, acc)
 	if err != nil {
 		return gatherError(acc, err)
+	}
+
+	//--- Get Datastores info
+	if vcs.DatastoreInstances && len(dcC.dss) > 0 {
+		err = dcC.CollectDatastoresInfo(vcs.ctx, cli.Client, acc)
+		if err != nil {
+			return gatherError(acc, err)
+		}
 	}
 
 	return nil

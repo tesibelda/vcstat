@@ -25,6 +25,8 @@ Use telegraf v1.14 or above so that execd input is available.
   #### you may enable or disable data collection per instance type ####
   ## collect cluster measurements (vcstat_cluster)
   # cluster_instances = true
+  ## collect datastore measurement (vcstat_datastore)
+  # datastore_instances = false
   ## collect host status measurements (vcstat_host)
   # host_instances = true
   ## collect host firewall measurement (vcstat_host_firewall)
@@ -98,6 +100,19 @@ Use telegraf v1.14 or above so that execd input is available.
 	- total_memory (int)
 	- effective_cpu (int)
 	- effective_memory (int)
+- vcstat_datastore
+  - tags:
+    - dsname
+	- moid
+    - type
+    - vcenter
+    - dcname
+  - fields:
+	- accessible (bool)
+	- capacity (int)
+	- freespace (int)
+	- uncommited (int)
+	- maintenance_mode (string)
 - vcstat_host
   - tags:
     - esxhostname
@@ -180,6 +195,7 @@ vcstat_host_hba,dcname=MyDC,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local
 vcstat_host_nic,dcname=MyDC,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1639585702275580100
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200
+vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommited=20511i,maintenance_mode="normal" 1639585702303440200
 ```
 
 # Build Instructions
