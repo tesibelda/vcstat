@@ -81,8 +81,8 @@ func (c *dcCollector) Collect(
 		dctags := getDcTags(client.URL().Host, dc.Name(), dc.Reference().Value)
 		dcfields := getDcFields(
 			len(c.clusters[i]),
-			len(c.dss[i]),
 			len(c.hosts[i]),
+			len(c.dss[i]),
 			len(c.nets[i]),
 		)
 		acc.AddFields("vcstat_datacenter", dcfields, dctags, time.Now())
