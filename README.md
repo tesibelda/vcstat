@@ -213,12 +213,12 @@ build the "vcstat" binary
     
  (if you're using windows, you'll want to give it an .exe extension)
  
-    go build -o bin\vcstat.exe cmd/main.go
+    $ go build -o bin\vcstat.exe cmd/main.go
 
  If you use [go-task](https://github.com/go-task/task) execute one of these
  
-    task linux:build
-	task windows:build
+    $ task linux:build
+	$ task windows:build
 
 # Author
 
