@@ -1,10 +1,10 @@
-// netCollector include functions to gather stats at network level
+// This file contains vccollector methods to gather stats about network entities
 //  (like Distributed Virtual Switches)
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
 
-package vcstat
+package vccollector
 
 import (
 	"context"
@@ -15,34 +15,40 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-// collectNetDVS gathers Distributed Virtual Switch info
-func collectNetDVS(
+// CollectNetDVS gathers Distributed Virtual Switch info
+func (c *VcCollector) CollectNetDVS(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	netMap map[int][]object.NetworkReference,
 	acc telegraf.Accumulator,
 ) error {
 	var (
 		nets      []object.NetworkReference
 		dvsMo     mo.DistributedVirtualSwitch
 		dvsConfig *(types.DVSConfigInfo)
+		dvs       *object.DistributedVirtualSwitch
 		err       error
+		ok        bool
 	)
 
-	for i, dc := range dcs {
-		nets = netMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.nets == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		nets = c.nets[i]
 		for _, net := range nets {
 			switch net.Reference().Type {
 			case "DistributedVirtualSwitch", "VmwareDistributedVirtualSwitch":
-				dvs, ok := net.(*object.DistributedVirtualSwitch)
-				if !ok {
-					return fmt.Errorf("could not get DVS from networkreference")
+				if dvs, ok = net.(*object.DistributedVirtualSwitch); !ok {
+					return fmt.Errorf("Could not get DVS from networkreference")
 				}
 				err = dvs.Properties(
 					ctx, dvs.Reference(),
@@ -50,15 +56,14 @@ func collectNetDVS(
 					&dvsMo,
 				)
 				if err != nil {
-					return fmt.Errorf("could not get dvs config property: %w", err)
+					return fmt.Errorf("Could not get dvs config property: %w", err)
 				}
-				dvsConfig = dvsMo.Config.GetDVSConfigInfo()
-				if dvsConfig == nil {
-					return fmt.Errorf("coud not get dvs configuration info")
+				if dvsConfig = dvsMo.Config.GetDVSConfigInfo(); dvsConfig == nil {
+					return fmt.Errorf("Could not get dvs configuration info")
 				}
 
 				dvstags := getDVSTags(
-					client.URL().Host,
+					c.client.Client.URL().Host,
 					dc.Name(),
 					dvs.Name(),
 					net.Reference().Value,
@@ -78,28 +83,35 @@ func collectNetDVS(
 	return nil
 }
 
-// collectNetDVP gathers Distributed Virtual Portgroup info
-func collectNetDVP(
+// CollectNetDVP gathers Distributed Virtual Portgroup info
+func (c *VcCollector) CollectNetDVP(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	netMap map[int][]object.NetworkReference,
 	acc telegraf.Accumulator,
 ) error {
 	var (
 		nets      []object.NetworkReference
 		dvpMo     mo.DistributedVirtualPortgroup
 		dvpConfig types.DVPortgroupConfigInfo
+		dvp       *object.DistributedVirtualPortgroup
 		err       error
+		ok        bool
 	)
 
-	for i, dc := range dcs {
-		nets = netMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.nets == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		nets = c.nets[i]
 		for _, net := range nets {
 			if net.Reference().Type == "DistributedVirtualPortgroup" {
-				dvp, ok := net.(*object.DistributedVirtualPortgroup)
-				if !ok {
-					return fmt.Errorf("could not get DVP from networkreference")
+				if dvp, ok = net.(*object.DistributedVirtualPortgroup); !ok {
+					return fmt.Errorf("Could not get DVP from networkreference")
 				}
 				err = dvp.Properties(
 					ctx, dvp.Reference(),
@@ -107,12 +119,12 @@ func collectNetDVP(
 					&dvpMo,
 				)
 				if err != nil {
-					return fmt.Errorf("could not get dvp config property: %w", err)
+					return fmt.Errorf("Could not get dvp config property: %w", err)
 				}
 				dvpConfig = dvpMo.Config
 
 				dvptags := getDVPTags(
-					client.URL().Host,
+					c.client.Client.URL().Host,
 					dc.Name(),
 					dvp.Name(),
 					net.Reference().Value,

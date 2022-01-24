@@ -1,9 +1,9 @@
-// hostCollector include functions to gather stats at host level
+// This file contains vccollector methods to gather stats about host entities
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
 
-package vcstat
+package vccollector
 
 import (
 	"context"
@@ -15,16 +15,12 @@ import (
 
 	"github.com/vmware/govmomi/govc/host/esxcli"
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
 )
 
-// collectHostInfo gathers host info
-func collectHostInfo(
+// CollectHostInfo gathers host info
+func (c *VcCollector) CollectHostInfo(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	hsMap map[int][]*object.HostSystem,
 	acc telegraf.Accumulator,
 ) error {
 	var (
@@ -34,18 +30,27 @@ func collectHostInfo(
 		hsCode, hsConnectionCode int16
 	)
 
-	for i, dc := range dcs {
-		hosts = hsMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.hosts == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		hosts = c.hosts[i]
 		for _, host := range hosts {
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
-				return fmt.Errorf("could not get host summary property: %w", err)
+				return fmt.Errorf("Could not get host summary property: %w", err)
 			}
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
 			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
 
 			hstags := getHostTags(
-				client.URL().Host,
+				c.client.Client.URL().Host,
 				dc.Name(),
 				host.Name(),
 				host.Reference().Value,
@@ -65,25 +70,34 @@ func collectHostInfo(
 	return nil
 }
 
-// collectHostHBA gathers host HBA info (like govc: storage core adapter list)
-func collectHostHBA(
+// CollectHostHBA gathers host HBA info (like govc: storage core adapter list)
+func (c *VcCollector) CollectHostHBA(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	hsMap map[int][]*object.HostSystem,
 	acc telegraf.Accumulator,
 ) error {
-	var hosts []*object.HostSystem
+	var (
+		hosts []*object.HostSystem
+		x     *esxcli.Executor
+		res   *esxcli.Response
+		err   error
+	)
 
-	for i, dc := range dcs {
-		hosts = hsMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.hosts == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		hosts = c.hosts[i]
 		for _, host := range hosts {
-			x, err := esxcli.NewExecutor(client, host)
-			if err != nil {
-				return fmt.Errorf("could not get esxcli executor: %w", err)
+			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+				return fmt.Errorf("Could not get esxcli executor: %w", err)
 			}
-			res, err := x.Run([]string{"storage", "core", "adapter", "list"})
-			if err != nil {
+			if res, err = x.Run([]string{"storage", "core", "adapter", "list"}); err != nil {
 				return err
 			}
 
@@ -94,7 +108,7 @@ func collectHostHBA(
 				}
 				for _, rv := range res.Values {
 					hbatags := getHbaTags(
-						client.URL().Host,
+						c.client.Client.URL().Host,
 						dc.Name(),
 						host.Name(),
 						rv["HBAName"][0],
@@ -106,8 +120,6 @@ func collectHostHBA(
 					)
 					acc.AddFields("vcstat_host_hba", hbafields, hbatags, time.Now())
 				}
-			} else {
-				fmt.Println("no storage adapters found", host.Name(), res.String)
 			}
 		}
 	}
@@ -115,25 +127,34 @@ func collectHostHBA(
 	return nil
 }
 
-// collectHostNIC gathers host NIC info (like govc: host.esxcli network nic list)
-func collectHostNIC(
+// CollectHostNIC gathers host NIC info (like govc: host.esxcli network nic list)
+func (c *VcCollector) CollectHostNIC(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	hsMap map[int][]*object.HostSystem,
 	acc telegraf.Accumulator,
 ) error {
-	var hosts []*object.HostSystem
+	var (
+		hosts []*object.HostSystem
+		x     *esxcli.Executor
+		res   *esxcli.Response
+		err   error
+	)
 
-	for i, dc := range dcs {
-		hosts = hsMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.hosts == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		hosts = c.hosts[i]
 		for _, host := range hosts {
-			x, err := esxcli.NewExecutor(client, host)
-			if err != nil {
-				return fmt.Errorf("could not get esxcli executor: %w", err)
+			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+				return fmt.Errorf("Could not get esxcli executor: %w", err)
 			}
-			res, err := x.Run([]string{"network", "nic", "list"})
-			if err != nil {
+			if res, err = x.Run([]string{"network", "nic", "list"}); err != nil {
 				return err
 			}
 
@@ -144,7 +165,7 @@ func collectHostNIC(
 				}
 				for _, rv := range res.Values {
 					nictags := getNicTags(
-						client.URL().Host,
+						c.client.Client.URL().Host,
 						dc.Name(),
 						host.Name(),
 						rv["Name"][0],
@@ -165,37 +186,46 @@ func collectHostNIC(
 	return nil
 }
 
-// collectHostFw gathers host Firewall info (like govc: host.esxcli network firewall get)
-func collectHostFw(
+// CollectHostFw gathers host Firewall info (like govc: host.esxcli network firewall get)
+func (c *VcCollector) CollectHostFw(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	hsMap map[int][]*object.HostSystem,
 	acc telegraf.Accumulator,
 ) error {
-	var hosts []*object.HostSystem
+	var (
+		hosts []*object.HostSystem
+		x     *esxcli.Executor
+		res   *esxcli.Response
+		err   error
+	)
 
-	for i, dc := range dcs {
-		hosts = hsMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.hosts == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		hosts = c.hosts[i]
 		for _, host := range hosts {
-			x, err := esxcli.NewExecutor(client, host)
-			if err != nil {
-				return fmt.Errorf("could not get esxcli executor for host %s: %w", host, err)
+			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+				return fmt.Errorf("Could not get esxcli executor for host %s: %w", host, err)
 			}
-			res, err := x.Run([]string{"network", "firewall", "get"})
-			if err != nil {
+			if res, err = x.Run([]string{"network", "firewall", "get"}); err != nil {
 				return err
 			}
 
 			if len(res.Values) > 0 {
-				fwtags := getFirewallTags(client.URL().Host, dc.Name(), host.Name())
+				fwtags := getFirewallTags(c.client.Client.URL().Host, dc.Name(), host.Name())
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
 				if err != nil {
-					return fmt.Errorf("could not parse firewall info for host %s: %w", host, err)
+					return fmt.Errorf("Could not parse firewall info for host %s: %w", host, err)
 				}
 				loaded, err := strconv.ParseBool(res.Values[0]["Loaded"][0])
 				if err != nil {
-					return fmt.Errorf("could not parse firewall info for host %s: %w", host, err)
+					return fmt.Errorf("Could not parse firewall info for host %s: %w", host, err)
 				}
 				fwfields := getFirewallFields(res.Values[0]["DefaultAction"][0], enabled, loaded)
 				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, time.Now())

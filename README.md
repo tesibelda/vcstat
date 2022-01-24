@@ -19,8 +19,11 @@ Use telegraf v1.14 or above so that execd input is available.
   vcenter = "https://vcenter.local/sdk"
   username = "user@corp.local"
   password = "secret"
+
+  ## Optional SSL Config
+  # tls_ca = "/path/to/cafile"
   ## Use SSL but skip chain & host verification
-  insecure_skip_verify = false
+  # insecure_skip_verify = false
 
   #### you may enable or disable data collection per instance type ####
   ## collect cluster measurements (vcstat_cluster)
@@ -200,7 +203,7 @@ vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS
 
 # Build Instructions
 
-Download the repo somewhere
+Download the repo
 
     $ git clone git@github.com:tesibelda/vcstat.git
 
@@ -211,6 +214,11 @@ build the "vcstat" binary
  (if you're using windows, you'll want to give it an .exe extension)
  
     go build -o bin\vcstat.exe cmd/main.go
+
+ If you use [go-task](https://github.com/go-task/task) execute one of these
+ 
+    task linux:build
+	task windows:build
 
 # Author
 

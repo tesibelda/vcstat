@@ -1,9 +1,9 @@
-// clusterCollector include functions to gather stats at cluster level
+// This file contains vccollector methods to gather stats about cluster entities
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
 
-package vcstat
+package vccollector
 
 import (
 	"context"
@@ -13,42 +13,46 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-// collectCluster gathers cluster info
-func collectCluster(
+// CollectClusterInfo gathers cluster info
+func (c *VcCollector) CollectClusterInfo(
 	ctx context.Context,
-	client *vim25.Client,
-	dcs []*object.Datacenter,
-	clMap map[int][]*object.ClusterComputeResource,
 	acc telegraf.Accumulator,
 ) error {
 	var (
 		clusters          []*object.ClusterComputeResource
 		clMo              mo.ClusterComputeResource
 		resourceSum       *(types.ComputeResourceSummary)
-		err               error
 		clusterStatusCode int16
+		err               error
 	)
 
-	for i, dc := range dcs {
-		clusters = clMap[i]
+	if c.client == nil {
+		fmt.Errorf(Error_NoClient)
+	}
+	if c.clusters == nil {
+		if err = c.getAllDatacentersEntities(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		clusters = c.clusters[i]
 		for _, cluster := range clusters {
 			err = cluster.Properties(ctx, cluster.Reference(), []string{"summary"}, &clMo)
 			if err != nil {
 				return err
 			}
-			resourceSum = clMo.Summary.GetComputeResourceSummary()
-			if resourceSum == nil {
-				return fmt.Errorf("coud not get cluster resource summary")
+			if resourceSum = clMo.Summary.GetComputeResourceSummary(); resourceSum == nil {
+				return fmt.Errorf("Could not get cluster resource summary")
 			}
 			clusterStatusCode = entityStatusCode(resourceSum.OverallStatus)
 
 			cltags := getClusterTags(
-				client.URL().Host,
+				c.client.Client.URL().Host,
 				dc.Name(),
 				cluster.Name(),
 				cluster.Reference().Value,
