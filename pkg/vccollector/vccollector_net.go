@@ -34,7 +34,7 @@ func (c *VcCollector) CollectNetDVS(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.nets == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {
@@ -98,7 +98,7 @@ func (c *VcCollector) CollectNetDVP(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.nets == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {

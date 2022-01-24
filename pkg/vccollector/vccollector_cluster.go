@@ -31,7 +31,7 @@ func (c *VcCollector) CollectClusterInfo(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.clusters == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {

@@ -31,7 +31,7 @@ func (c *VcCollector) CollectHostInfo(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.hosts == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {
@@ -83,7 +83,7 @@ func (c *VcCollector) CollectHostHBA(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.hosts == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {
@@ -140,7 +140,7 @@ func (c *VcCollector) CollectHostNIC(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.hosts == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {
@@ -199,7 +199,7 @@ func (c *VcCollector) CollectHostFw(
 	)
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 	if c.hosts == nil {
 		if err = c.getAllDatacentersEntities(ctx); err != nil {

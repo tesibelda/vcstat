@@ -24,7 +24,7 @@ func (c *VcCollector) CollectDatacenterInfo(
 	var err error
 
 	if c.client == nil {
-		fmt.Errorf(Error_NoClient)
+		return fmt.Errorf(string(Error_NoClient))
 	}
 
 	if err = c.getAllDatacentersEntities(ctx); err != nil {

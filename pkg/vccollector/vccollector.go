@@ -38,6 +38,7 @@ type VcCollector struct {
 	nets      [][]object.NetworkReference
 }
 
+// Common errors raised by vccollector
 const (
 	Error_NoClient   = "No vCenter client, please open a session"
 	Error_URLParsing = "Error parsing URL for vcenter"
@@ -60,10 +61,10 @@ func NewVCCollector(
 
 	// Parse URL params
 	if vcc.url, err = soap.ParseURL(vcenterUrl); err != nil {
-		return nil, fmt.Errorf(Error_URLParsing, ": %w", err)
+		return nil, fmt.Errorf(string(Error_URLParsing + ": %w" + err.Error()))
 	}
 	if vcc.url == nil {
-		return nil, fmt.Errorf(Error_URLParsing, ": returned nil")
+		return nil, fmt.Errorf(string(Error_URLParsing + ": returned nil"))
 	}
 	vcc.url.User = url.UserPassword(user, pass)
 
