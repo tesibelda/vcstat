@@ -48,7 +48,8 @@ func (c *VcCollector) CollectNetDVS(
 			switch net.Reference().Type {
 			case "DistributedVirtualSwitch", "VmwareDistributedVirtualSwitch":
 				if dvs, ok = net.(*object.DistributedVirtualSwitch); !ok {
-					return fmt.Errorf("Could not get DVS from networkreference")
+					acc.AddError(fmt.Errorf("Could not get DVS from networkreference"))
+					continue
 				}
 				err = dvs.Properties(
 					ctx, dvs.Reference(),
@@ -56,10 +57,12 @@ func (c *VcCollector) CollectNetDVS(
 					&dvsMo,
 				)
 				if err != nil {
-					return fmt.Errorf("Could not get dvs config property: %w", err)
+					acc.AddError(fmt.Errorf("Could not get dvs config property: %w", err))
+					continue
 				}
 				if dvsConfig = dvsMo.Config.GetDVSConfigInfo(); dvsConfig == nil {
-					return fmt.Errorf("Could not get dvs configuration info")
+					acc.AddError(fmt.Errorf("Could not get dvs configuration info"))
+					continue
 				}
 
 				dvstags := getDVSTags(
@@ -111,7 +114,8 @@ func (c *VcCollector) CollectNetDVP(
 		for _, net := range nets {
 			if net.Reference().Type == "DistributedVirtualPortgroup" {
 				if dvp, ok = net.(*object.DistributedVirtualPortgroup); !ok {
-					return fmt.Errorf("Could not get DVP from networkreference")
+					acc.AddError(fmt.Errorf("Could not get DVP from networkreference"))
+					continue
 				}
 				err = dvp.Properties(
 					ctx, dvp.Reference(),
@@ -119,7 +123,8 @@ func (c *VcCollector) CollectNetDVP(
 					&dvpMo,
 				)
 				if err != nil {
-					return fmt.Errorf("Could not get dvp config property: %w", err)
+					acc.AddError(fmt.Errorf("Could not get dvp config property: %w", err))
+					continue
 				}
 				dvpConfig = dvpMo.Config
 

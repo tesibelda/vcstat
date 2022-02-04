@@ -47,7 +47,8 @@ func (c *VcCollector) CollectDatastoresInfo(
 		}
 		err = pc.Retrieve(ctx, refs, []string{"summary"}, &dsMo)
 		if err != nil {
-			return err
+			acc.AddError(fmt.Errorf("Could not retrieve summary for datastore: %w", err))
+			continue
 		}
 		for _, ds := range dsMo {
 			dstags := getDsTags(

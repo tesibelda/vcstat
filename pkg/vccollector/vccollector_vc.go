@@ -47,7 +47,7 @@ func (c *VcCollector) getDatacenters(ctx context.Context) error {
 
 	finder := find.NewFinder(c.client.Client, false)
 	if c.dcs, err = finder.DatacenterList(ctx, "*"); err != nil {
-		return err
+		return fmt.Errorf("Could not get datacenter list: %w", err)
 	}
 
 	return err

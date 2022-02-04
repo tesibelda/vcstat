@@ -44,7 +44,8 @@ func (c *VcCollector) CollectHostInfo(
 		for _, host := range hosts {
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
-				return fmt.Errorf("Could not get host summary property: %w", err)
+				acc.AddError(fmt.Errorf("Could not get host summary property: %w", err))
+				continue
 			}
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
 			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
@@ -95,10 +96,12 @@ func (c *VcCollector) CollectHostHBA(
 		hosts = c.hosts[i]
 		for _, host := range hosts {
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				return fmt.Errorf("Could not get esxcli executor: %w", err)
+				acc.AddError(fmt.Errorf("Could not get esxcli executor for host %s: %w", host.Name(), err))
+				continue
 			}
 			if res, err = x.Run([]string{"storage", "core", "adapter", "list"}); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("Could not run esxcli storage executor against host %s: %w", host.Name(), err))
+				continue
 			}
 
 			if len(res.Values) > 0 {
@@ -107,18 +110,20 @@ func (c *VcCollector) CollectHostHBA(
 					keys = append(keys, key) //nolint
 				}
 				for _, rv := range res.Values {
-					hbatags := getHbaTags(
-						c.client.Client.URL().Host,
-						dc.Name(),
-						host.Name(),
-						rv["HBAName"][0],
-						rv["Driver"][0],
-					)
-					hbafields := getHbaFields(
-						rv["LinkState"][0],
-						hbaLinkStateCode(rv["LinkState"][0]),
-					)
-					acc.AddFields("vcstat_host_hba", hbafields, hbatags, time.Now())
+					if len(rv) > 0 && len(rv["LinkState"]) > 0 {
+						hbatags := getHbaTags(
+							c.client.Client.URL().Host,
+							dc.Name(),
+							host.Name(),
+							rv["HBAName"][0],
+							rv["Driver"][0],
+						)
+						hbafields := getHbaFields(
+							rv["LinkState"][0],
+							hbaLinkStateCode(rv["LinkState"][0]),
+						)
+						acc.AddFields("vcstat_host_hba", hbafields, hbatags, time.Now())
+					}
 				}
 			}
 		}
@@ -152,10 +157,12 @@ func (c *VcCollector) CollectHostNIC(
 		hosts = c.hosts[i]
 		for _, host := range hosts {
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				return fmt.Errorf("Could not get esxcli executor: %w", err)
+				acc.AddError(fmt.Errorf("Could not get esxcli executor for host %s: %w", host.Name(), err))
+				continue
 			}
 			if res, err = x.Run([]string{"network", "nic", "list"}); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("Could not run esxcli network executor against host %s: %w", host.Name(), err))
+				continue
 			}
 
 			if len(res.Values) > 0 {
@@ -164,20 +171,22 @@ func (c *VcCollector) CollectHostNIC(
 					keys = append(keys, key) //nolint
 				}
 				for _, rv := range res.Values {
-					nictags := getNicTags(
-						c.client.Client.URL().Host,
-						dc.Name(),
-						host.Name(),
-						rv["Name"][0],
-						rv["Driver"][0],
-					)
-					nicfields := getNicFields(
-						rv["LinkStatus"][0],
-						nicLinkStatusCode(rv["LinkStatus"][0]),
-						rv["AdminStatus"][0], rv["Duplex"][0],
-						rv["Speed"][0], rv["MACAddress"][0],
-					)
-					acc.AddFields("vcstat_host_nic", nicfields, nictags, time.Now())
+					if len(rv) > 0 && len(rv["LinkStatus"]) > 0 {
+						nictags := getNicTags(
+							c.client.Client.URL().Host,
+							dc.Name(),
+							host.Name(),
+							rv["Name"][0],
+							rv["Driver"][0],
+						)
+						nicfields := getNicFields(
+							rv["LinkStatus"][0],
+							nicLinkStatusCode(rv["LinkStatus"][0]),
+							rv["AdminStatus"][0], rv["Duplex"][0],
+							rv["Speed"][0], rv["MACAddress"][0],
+						)
+						acc.AddFields("vcstat_host_nic", nicfields, nictags, time.Now())
+					}
 				}
 			}
 		}
@@ -211,21 +220,25 @@ func (c *VcCollector) CollectHostFw(
 		hosts = c.hosts[i]
 		for _, host := range hosts {
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				return fmt.Errorf("Could not get esxcli executor for host %s: %w", host, err)
+				acc.AddError(fmt.Errorf("Could not get esxcli executor for host %s: %w", host.Name(), err))
+				continue
 			}
 			if res, err = x.Run([]string{"network", "firewall", "get"}); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("Could not run esxcli firewall executor against host %s: %w", host.Name(), err))
+				continue
 			}
 
 			if len(res.Values) > 0 {
 				fwtags := getFirewallTags(c.client.Client.URL().Host, dc.Name(), host.Name())
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
 				if err != nil {
-					return fmt.Errorf("Could not parse firewall info for host %s: %w", host, err)
+					acc.AddError(fmt.Errorf("Could not parse firewall info for host %s: %w", host.Name(), err))
+					continue
 				}
 				loaded, err := strconv.ParseBool(res.Values[0]["Loaded"][0])
 				if err != nil {
-					return fmt.Errorf("Could not parse firewall info for host %s: %w", host, err)
+					acc.AddError(fmt.Errorf("Could not parse firewall info for host %s: %w", host.Name(), err))
+					continue
 				}
 				fwfields := getFirewallFields(res.Values[0]["DefaultAction"][0], enabled, loaded)
 				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, time.Now())
