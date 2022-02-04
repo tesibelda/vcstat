@@ -8,6 +8,7 @@ package vccollector
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -55,6 +56,7 @@ func (c *VcCollector) CollectHostInfo(
 				dc.Name(),
 				host.Name(),
 				host.Reference().Value,
+				getclusterfromhost(host),
 			)
 			hsfields := getHostFields(
 				string(hsMo.Summary.OverallStatus),
@@ -249,12 +251,22 @@ func (c *VcCollector) CollectHostFw(
 	return nil
 }
 
-func getHostTags(vcenter, dcname, hostname, moid string) map[string]string {
+func getclusterfromhost(host *object.HostSystem) string {
+	re := regexp.MustCompile("/.*/host/(.*)/.*")
+	match := re.FindStringSubmatch(host.InventoryPath)
+	if len(match) > 1 {
+		return match[1]
+	}
+	return ""
+}
+
+func getHostTags(vcenter, dcname, hostname, moid, cluster string) map[string]string {
 	return map[string]string{
 		"vcenter":     vcenter,
 		"dcname":      dcname,
 		"esxhostname": hostname,
 		"moid":        moid,
+		"clustername": cluster,
 	}
 }
 
