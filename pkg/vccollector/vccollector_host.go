@@ -56,7 +56,7 @@ func (c *VcCollector) CollectHostInfo(
 				dc.Name(),
 				host.Name(),
 				host.Reference().Value,
-				getclusterfromhost(host),
+				getClusterFromHost(host),
 			)
 			hsfields := getHostFields(
 				string(hsMo.Summary.OverallStatus),
@@ -230,7 +230,7 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 
-			if len(res.Values) > 0 {
+			if len(res.Values) > 0 && len(res.Values[0]["Enabled"]) > 0 {
 				fwtags := getFirewallTags(c.client.Client.URL().Host, dc.Name(), host.Name())
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
 				if err != nil {
@@ -251,7 +251,7 @@ func (c *VcCollector) CollectHostFw(
 	return nil
 }
 
-func getclusterfromhost(host *object.HostSystem) string {
+func getClusterFromHost(host *object.HostSystem) string {
 	re := regexp.MustCompile("/.*/host/(.*)/.*")
 	match := re.FindStringSubmatch(host.InventoryPath)
 	if len(match) > 1 {
