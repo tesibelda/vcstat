@@ -8,8 +8,8 @@ package vccollector
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -54,9 +54,9 @@ func (c *VcCollector) CollectHostInfo(
 			hstags := getHostTags(
 				c.client.Client.URL().Host,
 				dc.Name(),
+				c.getClusterFromHost(i, host),
 				host.Name(),
 				host.Reference().Value,
-				getClusterFromHost(host),
 			)
 			hsfields := getHostFields(
 				string(hsMo.Summary.OverallStatus),
@@ -98,11 +98,24 @@ func (c *VcCollector) CollectHostHBA(
 		hosts = c.hosts[i]
 		for _, host := range hosts {
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(fmt.Errorf("Could not get esxcli executor for host %s: %w", host.Name(), err))
+				acc.AddError(
+					fmt.Errorf(
+						"Could not get esxcli executor for host %s: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
-			if res, err = x.Run([]string{"storage", "core", "adapter", "list"}); err != nil {
-				acc.AddError(fmt.Errorf("Could not run esxcli storage executor against host %s: %w", host.Name(), err))
+			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
+			if err != nil {
+				acc.AddError(
+					fmt.Errorf(
+						"Could not run esxcli storage executor against host %s: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
 
@@ -116,6 +129,7 @@ func (c *VcCollector) CollectHostHBA(
 						hbatags := getHbaTags(
 							c.client.Client.URL().Host,
 							dc.Name(),
+							c.getClusterFromHost(i, host),
 							host.Name(),
 							rv["HBAName"][0],
 							rv["Driver"][0],
@@ -159,11 +173,23 @@ func (c *VcCollector) CollectHostNIC(
 		hosts = c.hosts[i]
 		for _, host := range hosts {
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(fmt.Errorf("Could not get esxcli executor for host %s: %w", host.Name(), err))
+				acc.AddError(
+					fmt.Errorf(
+						"Could not get esxcli executor for host %s: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
 			if res, err = x.Run([]string{"network", "nic", "list"}); err != nil {
-				acc.AddError(fmt.Errorf("Could not run esxcli network executor against host %s: %w", host.Name(), err))
+				acc.AddError(
+					fmt.Errorf(
+						"Could not run esxcli network executor against host %s: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
 
@@ -177,6 +203,7 @@ func (c *VcCollector) CollectHostNIC(
 						nictags := getNicTags(
 							c.client.Client.URL().Host,
 							dc.Name(),
+							c.getClusterFromHost(i, host),
 							host.Name(),
 							rv["Name"][0],
 							rv["Driver"][0],
@@ -222,27 +249,60 @@ func (c *VcCollector) CollectHostFw(
 		hosts = c.hosts[i]
 		for _, host := range hosts {
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(fmt.Errorf("Could not get esxcli executor for host %s: %w", host.Name(), err))
+				acc.AddError(
+					fmt.Errorf(
+						"Could not get esxcli executor for host %s: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
 			if res, err = x.Run([]string{"network", "firewall", "get"}); err != nil {
-				acc.AddError(fmt.Errorf("Could not run esxcli firewall executor against host %s: %w", host.Name(), err))
+				acc.AddError(
+					fmt.Errorf(
+						"Could not run esxcli firewall executor against host %s: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
 
 			if len(res.Values) > 0 && len(res.Values[0]["Enabled"]) > 0 {
-				fwtags := getFirewallTags(c.client.Client.URL().Host, dc.Name(), host.Name())
+				fwtags := getFirewallTags(
+					c.client.Client.URL().Host,
+					dc.Name(),
+					c.getClusterFromHost(i, host),
+					host.Name(),
+				)
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
 				if err != nil {
-					acc.AddError(fmt.Errorf("Could not parse firewall info for host %s: %w", host.Name(), err))
+					acc.AddError(
+						fmt.Errorf(
+							"Could not parse firewall info for host %s: %w",
+							host.Name(),
+							err,
+						),
+					)
 					continue
 				}
 				loaded, err := strconv.ParseBool(res.Values[0]["Loaded"][0])
 				if err != nil {
-					acc.AddError(fmt.Errorf("Could not parse firewall info for host %s: %w", host.Name(), err))
+					acc.AddError(
+						fmt.Errorf(
+							"Could not parse firewall info for host %s: %w",
+							host.Name(),
+							err,
+						),
+					)
 					continue
 				}
-				fwfields := getFirewallFields(res.Values[0]["DefaultAction"][0], enabled, loaded)
+				fwfields := getFirewallFields(
+					res.Values[0]["DefaultAction"][0],
+					enabled,
+					loaded,
+				)
 				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, time.Now())
 			}
 		}
@@ -251,22 +311,23 @@ func (c *VcCollector) CollectHostFw(
 	return nil
 }
 
-func getClusterFromHost(host *object.HostSystem) string {
-	re := regexp.MustCompile("/.*/host/(.*)/.*")
-	match := re.FindStringSubmatch(host.InventoryPath)
-	if len(match) > 1 {
-		return match[1]
+func (c *VcCollector) getClusterFromHost(dcindex int, host *object.HostSystem) string {
+	for _, cluster := range c.clusters[dcindex] {
+		if strings.HasPrefix(host.InventoryPath, cluster.InventoryPath+"/") {
+			return cluster.Name()
+		}
 	}
+
 	return ""
 }
 
-func getHostTags(vcenter, dcname, hostname, moid, cluster string) map[string]string {
+func getHostTags(vcenter, dcname, cluster, hostname, moid string) map[string]string {
 	return map[string]string{
-		"vcenter":     vcenter,
+		"clustername": cluster,
 		"dcname":      dcname,
 		"esxhostname": hostname,
 		"moid":        moid,
-		"clustername": cluster,
+		"vcenter":     vcenter,
 	}
 }
 
@@ -278,22 +339,23 @@ func getHostFields(
 	connectionstatecode int16,
 ) map[string]interface{} {
 	return map[string]interface{}{
-		"status":                overallstatus,
-		"status_code":           hoststatuscode,
-		"reboot_required":       rebootrequired,
-		"in_maintenance_mode":   inmaintenancemode,
 		"connection_state":      connectionstate,
 		"connection_state_code": connectionstatecode,
+		"in_maintenance_mode":   inmaintenancemode,
+		"reboot_required":       rebootrequired,
+		"status":                overallstatus,
+		"status_code":           hoststatuscode,
 	}
 }
 
-func getHbaTags(vcenter, dcname, hostname, hba, driver string) map[string]string {
+func getHbaTags(vcenter, dcname, cluster, hostname, hba, driver string) map[string]string {
 	return map[string]string{
-		"vcenter":     vcenter,
+		"clustername": cluster,
 		"dcname":      dcname,
-		"esxhostname": hostname,
 		"device":      hba,
 		"driver":      driver,
+		"esxhostname": hostname,
+		"vcenter":     vcenter,
 	}
 }
 
@@ -304,13 +366,14 @@ func getHbaFields(status string, statuscode int16) map[string]interface{} {
 	}
 }
 
-func getNicTags(vcenter, dcname, hostname, nic, driver string) map[string]string {
+func getNicTags(vcenter, dcname, cluster, hostname, nic, driver string) map[string]string {
 	return map[string]string{
-		"vcenter":     vcenter,
+		"clustername": cluster,
 		"dcname":      dcname,
-		"esxhostname": hostname,
 		"device":      nic,
 		"driver":      driver,
+		"esxhostname": hostname,
+		"vcenter":     vcenter,
 	}
 }
 
@@ -361,11 +424,12 @@ func nicLinkStatusCode(state string) int16 {
 	}
 }
 
-func getFirewallTags(vcenter, dcname, hostname string) map[string]string {
+func getFirewallTags(vcenter, dcname, cluster, hostname string) map[string]string {
 	return map[string]string{
-		"vcenter":     vcenter,
+		"clustername": cluster,
 		"dcname":      dcname,
 		"esxhostname": hostname,
+		"vcenter":     vcenter,
 	}
 }
 
