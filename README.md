@@ -122,6 +122,7 @@ Use telegraf v1.14 or above so that execd input is available.
 	- moid
     - vcenter
     - dcname
+    - clustername
   - fields:
 	- status (string)
 	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
@@ -134,6 +135,7 @@ Use telegraf v1.14 or above so that execd input is available.
     - esxhostname
     - vcenter
     - dcname
+    - clustername
   - fields:
 	- defaultaction (string)
 	- enabled (bool)
@@ -145,6 +147,7 @@ Use telegraf v1.14 or above so that execd input is available.
     - esxhostname
     - vcenter
     - dcname
+    - clustername
   - fields:
 	- link_state (string) 0-link-up, 1-link-n/a, 2-unbound, 3-link-down
 	- link_state_code (int)
@@ -155,6 +158,7 @@ Use telegraf v1.14 or above so that execd input is available.
     - esxhostname
     - vcenter
     - dcname
+    - clustername
   - fields:
 	- link_status (string)
 	- link_status_code (int) 0-Up, 1-Unknown, 2-Down
@@ -192,10 +196,10 @@ Use telegraf v1.14 or above so that execd input is available.
 vcstat_vcenter,vcenter=vcenter.local name="VMware vCenter Server",num_datacenters=1i,ostype="linux-x64",version="6.5.0" 1639585700012818600
 vcstat_datacenter,dcname=MyDC,moid=datacenter-2,vcenter=vcenter.local num_catastores=51i,num_hosts=8i,num_networks=32i,num_clusters=1i 1639585700181013900
 vcstat_cluster,clustername=MyCluster-01,dcname=MyDC,moid=domain-c121,vcenter=vcenter.local num_cpu_cores=152i,total_cpu=342248i,total_memory=1648683421696i,effective_cpu=299032i,status="green",status_code=0i,num_hosts=8i,num_effective_hosts=8i,num_cpu_threads=304i,effective_memory=1502236i 1639585700198033100
-vcstat_host,dcname=MyDC,esxhostname=myesxi01.local,moid=host-706,vcenter=vcenter.local connection_state_code=0i,status="green",status_code=0i,reboot_required=false,in_maintenance_mode=false,connection_state="connected" 1639585700602279400
-vcstat_host_firewall,dcname=MyDC,esxhostname=myesxi01.local,vcenter=vcenter.local defaultaction="DROP",enabled=true,loaded=true 1639585701216566800
-vcstat_host_hba,dcname=MyDC,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local,vcenter=vcenter.local status="link-n/a",status_code=1i 1639585701216566800
-vcstat_host_nic,dcname=MyDC,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1639585702275580100
+vcstat_host,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,moid=host-706,vcenter=vcenter.local connection_state_code=0i,status="green",status_code=0i,reboot_required=false,in_maintenance_mode=false,connection_state="connected" 1639585700602279400
+vcstat_host_firewall,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,vcenter=vcenter.local defaultaction="DROP",enabled=true,loaded=true 1639585701216566800
+vcstat_host_hba,dcname=MyDC,clustername=MyCluster-01,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local,vcenter=vcenter.local status="link-n/a",status_code=1i 1639585701216566800
+vcstat_host_nic,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1639585702275580100
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommited=20511i,maintenance_mode="normal" 1639585702303440200
