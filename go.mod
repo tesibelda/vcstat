@@ -3,17 +3,17 @@ module github.com/tesibelda/vcstat
 go 1.17
 
 require (
-	github.com/influxdata/telegraf v1.21.1
-	github.com/vmware/govmomi v0.27.2
+	github.com/influxdata/telegraf v1.21.3
+	github.com/vmware/govmomi v0.27.3
 )
 
 require (
 	collectd.org v0.5.0 // indirect
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15 // indirect
-	github.com/antchfx/jsonquery v1.1.4 // indirect
-	github.com/antchfx/xmlquery v1.3.6 // indirect
-	github.com/antchfx/xpath v1.1.11 // indirect
+	github.com/antchfx/jsonquery v1.1.5 // indirect
+	github.com/antchfx/xmlquery v1.3.9 // indirect
+	github.com/antchfx/xpath v1.2.0 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/caio/go-tdigest v3.1.0+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
@@ -35,7 +35,7 @@ require (
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.31.1 // indirect
+	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2 // indirect
 	github.com/tidwall/gjson v1.10.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -45,9 +45,9 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.9.9 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/net v0.0.0-20211005215030-d2e5035098b3 // indirect
-	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
+	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20210827211047-25e5f791fe06 // indirect
+	google.golang.org/genproto v0.0.0-20220111164026-67b88f271998 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
