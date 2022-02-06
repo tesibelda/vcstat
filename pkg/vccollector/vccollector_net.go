@@ -57,6 +57,9 @@ func (c *VcCollector) CollectNetDVS(
 					&dvsMo,
 				)
 				if err != nil {
+					if err, exit := govQueryError(err); exit {
+						return err
+					}
 					acc.AddError(fmt.Errorf("Could not get dvs config property: %w", err))
 					continue
 				}
@@ -123,6 +126,9 @@ func (c *VcCollector) CollectNetDVP(
 					&dvpMo,
 				)
 				if err != nil {
+					if err, exit := govQueryError(err); exit {
+						return err
+					}
 					acc.AddError(fmt.Errorf("Could not get dvp config property: %w", err))
 					continue
 				}

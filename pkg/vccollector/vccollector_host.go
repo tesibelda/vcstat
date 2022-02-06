@@ -17,6 +17,7 @@ import (
 	"github.com/vmware/govmomi/govc/host/esxcli"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 // CollectHostInfo gathers host info
@@ -42,12 +43,17 @@ func (c *VcCollector) CollectHostInfo(
 
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
-		for _, host := range hosts {
+		c.hostsRInfo[i] = make([]*types.HostRuntimeInfo, len(hosts))
+		for j, host := range hosts {
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
+				if err, exit := govQueryError(err); exit {
+					return err
+				}
 				acc.AddError(fmt.Errorf("Could not get host summary property: %w", err))
 				continue
 			}
+			c.hostsRInfo[i][j] = hsMo.Summary.Runtime
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
 			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
 
@@ -96,7 +102,10 @@ func (c *VcCollector) CollectHostHBA(
 
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
-		for _, host := range hosts {
+		for j, host := range hosts {
+			if !c.isHostConnectedIdx(i, j) {
+				continue
+			}
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
 				acc.AddError(
 					fmt.Errorf(
@@ -109,6 +118,9 @@ func (c *VcCollector) CollectHostHBA(
 			}
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
 			if err != nil {
+				if err, exit := govQueryError(err); exit {
+					return err
+				}
 				acc.AddError(
 					fmt.Errorf(
 						"Could not run esxcli storage executor against host %s: %w",
@@ -171,7 +183,10 @@ func (c *VcCollector) CollectHostNIC(
 
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
-		for _, host := range hosts {
+		for j, host := range hosts {
+			if !c.isHostConnectedIdx(i, j) {
+				continue
+			}
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
 				acc.AddError(
 					fmt.Errorf(
@@ -183,6 +198,9 @@ func (c *VcCollector) CollectHostNIC(
 				continue
 			}
 			if res, err = x.Run([]string{"network", "nic", "list"}); err != nil {
+				if err, exit := govQueryError(err); exit {
+					return err
+				}
 				acc.AddError(
 					fmt.Errorf(
 						"Could not run esxcli network executor against host %s: %w",
@@ -247,7 +265,10 @@ func (c *VcCollector) CollectHostFw(
 
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
-		for _, host := range hosts {
+		for j, host := range hosts {
+			if !c.isHostConnectedIdx(i, j) {
+				continue
+			}
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
 				acc.AddError(
 					fmt.Errorf(
@@ -259,6 +280,9 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 			if res, err = x.Run([]string{"network", "firewall", "get"}); err != nil {
+				if err, exit := govQueryError(err); exit {
+					return err
+				}
 				acc.AddError(
 					fmt.Errorf(
 						"Could not run esxcli firewall executor against host %s: %w",
@@ -319,6 +343,54 @@ func (c *VcCollector) getClusterFromHost(dcindex int, host *object.HostSystem) s
 	}
 
 	return ""
+}
+
+func (c *VcCollector) IsHostConnected(dc *object.Datacenter, host *object.HostSystem) bool {
+	var connected bool
+
+	for i, searcdc := range c.dcs {
+		if searcdc == dc {
+			for j, searchost := range c.hosts[i] {
+				if searchost == host {
+					connected = c.isHostConnectedIdx(i, j)
+					break
+				}
+			}
+		}
+	}
+
+	return connected
+}
+
+func (c *VcCollector) isHostConnectedIdx(dcindex, hostindex int) bool {
+	var connected bool
+
+	if len(c.hostsRInfo) <= dcindex || len(c.hostsRInfo[dcindex]) <= hostindex {
+		return true
+	}
+	if len(c.hosts) <= dcindex || len(c.hosts[dcindex]) <= hostindex {
+		return connected
+	}
+	connectedString := c.hostsRInfo[dcindex][hostindex].ConnectionState
+	if connectedString == types.HostSystemConnectionStateConnected {
+		connected = true
+	}
+
+	return connected
+}
+
+// hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting from telegraf metrics
+func hostConnectionStateCode(state types.HostSystemConnectionState) int16 {
+	switch state {
+	case types.HostSystemConnectionStateConnected:
+		return 0
+	case types.HostSystemConnectionStateNotResponding:
+		return 1
+	case types.HostSystemConnectionStateDisconnected:
+		return 2
+	default:
+		return 0
+	}
 }
 
 func getHostTags(vcenter, dcname, cluster, hostname, moid string) map[string]string {

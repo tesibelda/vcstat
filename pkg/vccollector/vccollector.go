@@ -11,7 +11,9 @@ package vccollector
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"time"
 
@@ -28,14 +30,15 @@ import (
 // VcCollector struct contains session and entities of a vCenter
 type VcCollector struct {
 	tls.ClientConfig
-	urlString string
-	url       *url.URL
-	client    *govmomi.Client
-	dcs       []*object.Datacenter
-	clusters  [][]*object.ClusterComputeResource
-	dss       [][]*object.Datastore
-	hosts     [][]*object.HostSystem
-	nets      [][]object.NetworkReference
+	urlString  string
+	url        *url.URL
+	client     *govmomi.Client
+	dcs        []*object.Datacenter
+	clusters   [][]*object.ClusterComputeResource
+	dss        [][]*object.Datastore
+	hosts      [][]*object.HostSystem
+	hostsRInfo [][]*types.HostRuntimeInfo
+	nets       [][]object.NetworkReference
 }
 
 // Common errors raised by vccollector
@@ -171,16 +174,17 @@ func entityStatusCode(status types.ManagedEntityStatus) int16 {
 	}
 }
 
-// hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting from telegraf metrics
-func hostConnectionStateCode(state types.HostSystemConnectionState) int16 {
-	switch state {
-	case types.HostSystemConnectionStateConnected:
-		return 0
-	case types.HostSystemConnectionStateNotResponding:
-		return 1
-	case types.HostSystemConnectionStateDisconnected:
-		return 2
-	default:
-		return 0
+// govQueryError returns false if error is light and we may continue quering or not 
+func govQueryError(err error) (error, bool) {
+	if err == context.Canceled {
+		return err, true
 	}
+
+	var dnsError *net.DNSError
+	var opError *net.OpError
+	if errors.As(err, &dnsError) || errors.As(err, &opError) {
+		return err, true
+	}
+
+	return err, false
 }

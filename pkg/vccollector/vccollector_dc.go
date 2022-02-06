@@ -14,6 +14,7 @@ import (
 
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 // CollectDatacenterInfo gathers datacenter info
@@ -69,11 +70,13 @@ func (c *VcCollector) getAllDatacentersEntities(ctx context.Context) error {
 			c.clusters = make([][]*object.ClusterComputeResource, numdcs)
 			c.dss = make([][]*object.Datastore, numdcs)
 			c.hosts = make([][]*object.HostSystem, numdcs)
+			c.hostsRInfo = make([][]*types.HostRuntimeInfo, numdcs)
 			c.nets = make([][]object.NetworkReference, numdcs)
 		} else {
 			c.clusters = nil
 			c.dss = nil
 			c.hosts = nil
+			c.hostsRInfo = nil
 			c.nets = nil
 		}
 	}

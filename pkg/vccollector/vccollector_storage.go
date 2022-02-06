@@ -47,6 +47,9 @@ func (c *VcCollector) CollectDatastoresInfo(
 		}
 		err = pc.Retrieve(ctx, refs, []string{"summary"}, &dsMo)
 		if err != nil {
+			if err, exit := govQueryError(err); exit {
+				return err
+			}
 			acc.AddError(fmt.Errorf("Could not retrieve summary for datastore: %w", err))
 			continue
 		}
