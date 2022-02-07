@@ -8,6 +8,7 @@ package vccollector
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -102,7 +103,9 @@ func (c *VcCollector) getDatacenterEntities(
 
 	// clusters
 	if c.clusters[idx], err = finder.ClusterComputeResourceList(ctx, "*"); err != nil {
-		return fmt.Errorf("Could not get datacenter cluster list: %w", err)
+		if !strings.Contains(err.Error(), "'*' not found") {
+			return fmt.Errorf("Could not get datacenter cluster list: %w", err)
+		}
 	}
 
 	// hosts
@@ -112,12 +115,16 @@ func (c *VcCollector) getDatacenterEntities(
 
 	// networks (dvs,dvp,..)
 	if c.nets[idx], err = finder.NetworkList(ctx, "*"); err != nil {
-		return fmt.Errorf("Could not get datacenter network list %w", err)
+		if !strings.Contains(err.Error(), "'*' not found") {
+			return fmt.Errorf("Could not get datacenter network list %w", err)
+		}
 	}
 
 	// datastores
 	if c.dss[idx], err = finder.DatastoreList(ctx, "*"); err != nil {
-		return fmt.Errorf("Could not get datacenter datastore list %w", err)
+		if !strings.Contains(err.Error(), "'*' not found") {
+			return fmt.Errorf("Could not get datacenter datastore list %w", err)
+		}
 	}
 
 	return err
