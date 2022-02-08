@@ -33,8 +33,8 @@ func (c *VcCollector) CollectClusterInfo(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.clusters == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.clusters) == 0 {
+		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 			return err
 		}
 	}
@@ -78,10 +78,10 @@ func (c *VcCollector) CollectClusterInfo(
 
 func getClusterTags(vcenter, dcname, clustername, moid string) map[string]string {
 	return map[string]string{
-		"vcenter":     vcenter,
 		"dcname":      dcname,
 		"clustername": clustername,
 		"moid":        moid,
+		"vcenter":     vcenter,
 	}
 }
 
@@ -93,15 +93,15 @@ func getClusterFields(
 	totalcpu, totalmemory, effectivecpu, effectivememory int,
 ) map[string]interface{} {
 	return map[string]interface{}{
-		"status":              overallstatus,
-		"status_code":         clusterstatuscode,
-		"num_hosts":           numhosts,
-		"num_effective_hosts": numeffectivehosts,
-		"num_cpu_cores":       numcpucores,
-		"num_cpu_threads":     numcputhreads,
-		"total_cpu":           totalcpu,
-		"total_memory":        totalmemory,
 		"effective_cpu":       effectivecpu,
 		"effective_memory":    effectivememory,
+		"num_cpu_cores":       numcpucores,
+		"num_cpu_threads":     numcputhreads,
+		"num_effective_hosts": numeffectivehosts,
+		"num_hosts":           numhosts,
+		"status":              overallstatus,
+		"status_code":         clusterstatuscode,
+		"total_cpu":           totalcpu,
+		"total_memory":        totalmemory,
 	}
 }

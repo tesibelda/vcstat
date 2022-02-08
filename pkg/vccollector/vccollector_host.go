@@ -35,8 +35,8 @@ func (c *VcCollector) CollectHostInfo(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.hosts == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.hosts) == 0 {
+		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 			return err
 		}
 	}
@@ -94,8 +94,8 @@ func (c *VcCollector) CollectHostHBA(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.hosts == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.hosts) == 0 {
+		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 			return err
 		}
 	}
@@ -175,8 +175,8 @@ func (c *VcCollector) CollectHostNIC(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.hosts == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.hosts) == 0 {
+		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 			return err
 		}
 	}
@@ -257,8 +257,8 @@ func (c *VcCollector) CollectHostFw(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.hosts == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.hosts) == 0 {
+		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 			return err
 		}
 	}

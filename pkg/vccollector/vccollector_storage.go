@@ -32,8 +32,8 @@ func (c *VcCollector) CollectDatastoresInfo(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.dss == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.dss) == 0 {
+		if err = c.getAllDatacentersDatastores(ctx); err != nil {
 			return err
 		}
 	}
@@ -77,11 +77,11 @@ func (c *VcCollector) CollectDatastoresInfo(
 
 func getDsTags(vcenter, dcname, dsname, moid, dstype string) map[string]string {
 	return map[string]string{
-		"vcenter": vcenter,
 		"dcname":  dcname,
 		"dsname":  dsname,
 		"moid":    moid,
 		"type":    dstype,
+		"vcenter": vcenter,
 	}
 }
 
@@ -90,7 +90,7 @@ func getDsFields(accessible bool, capacity, freespace, uncommited int64, mainten
 		"accessible":       accessible,
 		"capacity":         capacity,
 		"freespace":        freespace,
-		"uncommited":       uncommited,
 		"maintenance_mode": maintenance,
+		"uncommited":       uncommited,
 	}
 }

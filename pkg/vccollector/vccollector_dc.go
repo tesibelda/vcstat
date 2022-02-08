@@ -18,6 +18,11 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
+const (
+	StrAsterisk = "*"
+	StrErrorNotFoud = "'*' not found"
+)
+
 // CollectDatacenterInfo gathers datacenter info
 func (c *VcCollector) CollectDatacenterInfo(
 	ctx context.Context,
@@ -57,7 +62,7 @@ func (c *VcCollector) getAllDatacentersEntities(ctx context.Context) error {
 		err                  error
 	)
 
-	if c.dcs == nil {
+	if len(c.dcs) == 0 {
 		if err := c.getDatacenters(ctx); err != nil {
 			return err
 		}
@@ -102,39 +107,114 @@ func (c *VcCollector) getDatacenterEntities(
 	finder.SetDatacenter(dc)
 
 	// clusters
-	if c.clusters[idx], err = finder.ClusterComputeResourceList(ctx, "*"); err != nil {
-		if !strings.Contains(err.Error(), "'*' not found") {
+	if c.clusters[idx], err = finder.ClusterComputeResourceList(ctx, StrAsterisk); err != nil {
+		if !strings.Contains(err.Error(), StrErrorNotFoud) {
 			return fmt.Errorf("Could not get datacenter cluster list: %w", err)
 		}
 	}
 
 	// hosts
-	if c.hosts[idx], err = finder.HostSystemList(ctx, "*"); err != nil {
+	if c.hosts[idx], err = finder.HostSystemList(ctx, StrAsterisk); err != nil {
 		return fmt.Errorf("Could not get datacenter node list: %w", err)
 	}
 
 	// networks (dvs,dvp,..)
-	if c.nets[idx], err = finder.NetworkList(ctx, "*"); err != nil {
-		if !strings.Contains(err.Error(), "'*' not found") {
+	if c.nets[idx], err = finder.NetworkList(ctx, StrAsterisk); err != nil {
+		if !strings.Contains(err.Error(), StrErrorNotFoud) {
 			return fmt.Errorf("Could not get datacenter network list %w", err)
 		}
 	}
 
 	// datastores
-	if c.dss[idx], err = finder.DatastoreList(ctx, "*"); err != nil {
-		if !strings.Contains(err.Error(), "'*' not found") {
+	if c.dss[idx], err = finder.DatastoreList(ctx, StrAsterisk); err != nil {
+		if !strings.Contains(err.Error(), StrErrorNotFoud) {
 			return fmt.Errorf("Could not get datacenter datastore list %w", err)
 		}
 	}
 
-	return err
+	return nil
+}
+
+func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) error {
+	var err error
+
+	if len(c.dcs) == 0 {
+		if err := c.getDatacenters(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		finder := find.NewFinder(c.client.Client, false)
+		finder.SetDatacenter(dc)
+	
+		// clusters
+		if c.clusters[i], err = finder.ClusterComputeResourceList(ctx, StrAsterisk); err != nil {
+			if !strings.Contains(err.Error(), StrErrorNotFoud) {
+				return fmt.Errorf("Could not get datacenter cluster list: %w", err)
+			}
+		}
+	
+		// hosts
+		if c.hosts[i], err = finder.HostSystemList(ctx, StrAsterisk); err != nil {
+			return fmt.Errorf("Could not get datacenter node list: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *VcCollector) getAllDatacentersNetworks(ctx context.Context) error {
+	var err error
+
+	if len(c.dcs) == 0 {
+		if err := c.getDatacenters(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		finder := find.NewFinder(c.client.Client, false)
+		finder.SetDatacenter(dc)
+	
+		if c.nets[i], err = finder.NetworkList(ctx, StrAsterisk); err != nil {
+			if !strings.Contains(err.Error(), StrErrorNotFoud) {
+				return fmt.Errorf("Could not get datacenter network list %w", err)
+			}
+		}
+	 }
+
+	return nil
+}
+
+func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
+	var err error
+
+	if len(c.dcs) == 0 {
+		if err := c.getDatacenters(ctx); err != nil {
+			return err
+		}
+	}
+
+	for i, dc := range c.dcs {
+		finder := find.NewFinder(c.client.Client, false)
+		finder.SetDatacenter(dc)
+	
+		if c.dss[i], err = finder.DatastoreList(ctx, StrAsterisk); err != nil {
+			if !strings.Contains(err.Error(), StrErrorNotFoud) {
+				return fmt.Errorf("Could not get datacenter datastore list %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func getDcTags(vcenter, dcname, moid string) map[string]string {
 	return map[string]string{
-		"vcenter": vcenter,
 		"dcname":  dcname,
 		"moid":    moid,
+		"vcenter": vcenter,
 	}
 }
 

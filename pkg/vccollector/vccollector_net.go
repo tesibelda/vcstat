@@ -36,8 +36,8 @@ func (c *VcCollector) CollectNetDVS(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.nets == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.nets) == 0 {
+		if err = c.getAllDatacentersNetworks(ctx); err != nil {
 			return err
 		}
 	}
@@ -106,8 +106,8 @@ func (c *VcCollector) CollectNetDVP(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if c.nets == nil {
-		if err = c.getAllDatacentersEntities(ctx); err != nil {
+	if len(c.nets) == 0 {
+		if err = c.getAllDatacentersNetworks(ctx); err != nil {
 			return err
 		}
 	}
@@ -156,10 +156,10 @@ func (c *VcCollector) CollectNetDVP(
 
 func getDVSTags(vcenter, dcname, dvs, moid string) map[string]string {
 	return map[string]string{
-		"vcenter": vcenter,
 		"dcname":  dcname,
 		"dvs":     dvs,
 		"moid":    moid,
+		"vcenter": vcenter,
 	}
 }
 
@@ -169,21 +169,21 @@ func getDVSFields(
 	numports, maxports, numsaports int32,
 ) map[string]interface{} {
 	return map[string]interface{}{
+		"max_ports":            maxports,
+		"num_ports":            numports,
+		"num_standalone_ports": numsaports,
 		"status":               overallstatus,
 		"status_code":          dvsstatuscode,
-		"num_ports":            numports,
-		"max_ports":            maxports,
-		"num_standalone_ports": numsaports,
 	}
 }
 
 func getDVPTags(vcenter, dcname, dvp, moid, uplink string) map[string]string {
 	return map[string]string{
-		"vcenter": vcenter,
 		"dcname":  dcname,
 		"dvp":     dvp,
 		"moid":    moid,
 		"uplink":  uplink,
+		"vcenter": vcenter,
 	}
 }
 
@@ -193,8 +193,8 @@ func getDVPFields(
 	numports int32,
 ) map[string]interface{} {
 	return map[string]interface{}{
+		"num_ports":   numports,
 		"status":      overallstatus,
 		"status_code": dvpstatuscode,
-		"num_ports":   numports,
 	}
 }
