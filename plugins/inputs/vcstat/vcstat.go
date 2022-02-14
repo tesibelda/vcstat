@@ -7,6 +7,7 @@ package vcstat
 
 import (
 	"context"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -15,7 +16,7 @@ import (
 	"github.com/tesibelda/vcstat/pkg/vccollector"
 )
 
-type vcstatConfig struct {
+type VCstatConfig struct {
 	tls.ClientConfig
 	VCenter  string          `toml:"vcenter"`
 	Username string          `toml:"username"`
@@ -31,9 +32,10 @@ type vcstatConfig struct {
 	NetDVSInstances    bool `toml:"net_dvs_instances"`
 	NetDVPInstances    bool `toml:"net_dvp_instances"`
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	vcc    *vccollector.VcCollector
+	pollInterval time.Duration
+	ctx          context.Context
+	cancel       context.CancelFunc
+	vcc          *vccollector.VcCollector
 }
 
 var sampleConfig = `
@@ -67,8 +69,9 @@ var sampleConfig = `
 `
 
 func init() {
+	m, _ := time.ParseDuration("50s") //nolint: hardcoded 1m expects no error
 	inputs.Add("vcstat", func() telegraf.Input {
-		return &vcstatConfig{
+		return &VCstatConfig{
 			VCenter:            "https://vcenter.local/sdk",
 			Username:           "user@corp.local",
 			Password:           "secret",
@@ -80,12 +83,13 @@ func init() {
 			HostNICInstances:   false,
 			NetDVSInstances:    true,
 			NetDVPInstances:    false,
+			pollInterval:       m,
 		}
 	})
 }
 
 // Init initializes internal vcstat variables with the provided configuration
-func (vcs *vcstatConfig) Init() error {
+func (vcs *VCstatConfig) Init() error {
 	var err error
 
 	vcs.ctx, vcs.cancel = context.WithCancel(context.Background())
@@ -99,35 +103,52 @@ func (vcs *vcstatConfig) Init() error {
 		vcs.Username,
 		vcs.Password,
 		&vcs.ClientConfig,
+		vcs.pollInterval,
 	)
 
 	return err
 }
 
+// Start is called from telegraf core when a plugin is started
+func (vcs *VCstatConfig) Start() {
+	// Set vccollector dataduration as half the telegraf shim polling interval
+	dd := time.Duration(vcs.pollInterval.Seconds() / 2)
+	vcs.vcc.SetDataDuration(dd)
+}
+
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
-func (vcs *vcstatConfig) Stop() {
+func (vcs *VCstatConfig) Stop() {
 	if vcs.vcc != nil {
 		vcs.vcc.Close(vcs.ctx)
 	}
 	vcs.cancel()
 }
 
+// SetPollInterval allows telegraf shim to tell vcstat the configured polling interval
+func (vcs *VCstatConfig) SetPollInterval(pollInterval time.Duration) error {
+	vcs.pollInterval = pollInterval
+	return nil
+}
+
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
-func (vcs *vcstatConfig) SampleConfig() string {
+func (vcs *VCstatConfig) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns a short textual description of the plugin
-func (vcs *vcstatConfig) Description() string {
+func (vcs *VCstatConfig) Description() string {
 	return "Gathers vSphere vCenter status and basic stats"
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
-func (vcs *vcstatConfig) Gather(acc telegraf.Accumulator) error {
-	var err error
+func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
+	var (
+		col *vccollector.VcCollector
+		err error
+	)
 
 	//--- re-Init if needed
 	if vcs.ctx == nil || vcs.ctx.Err() != nil || vcs.vcc == nil {
@@ -135,25 +156,28 @@ func (vcs *vcstatConfig) Gather(acc telegraf.Accumulator) error {
 			return gatherError(acc, err)
 		}
 	}
-	if !vcs.vcc.IsActive(vcs.ctx) {
-		if err = vcs.vcc.Open(vcs.ctx); err != nil {
+	col = vcs.vcc
+	if !col.IsActive(vcs.ctx) {
+		if err = col.Open(vcs.ctx); err != nil {
 			return gatherError(acc, err)
 		}
 	}
 
 	//--- Get vCenter basic stats
-	if err = vcs.vcc.CollectVcenterInfo(vcs.ctx, acc); err != nil {
+	if err = col.CollectVcenterInfo(vcs.ctx, acc); err != nil {
 		return gatherError(acc, err)
 	}
 
 	//--- Get Datacenters info
-	if err = vcs.vcc.CollectDatacenterInfo(vcs.ctx, acc); err != nil {
-		return gatherError(acc, err)
+	if vcs.ClusterInstances || vcs.HostInstances {
+		if err = col.CollectDatacenterInfo(vcs.ctx, acc); err != nil {
+			return gatherError(acc, err)
+		}
 	}
 
 	//--- Get Clusters info
 	if vcs.ClusterInstances {
-		if err = vcs.vcc.CollectClusterInfo(vcs.ctx, acc); err != nil {
+		if err = col.CollectClusterInfo(vcs.ctx, acc); err != nil {
 			return gatherError(acc, err)
 		}
 	}
@@ -168,7 +192,7 @@ func (vcs *vcstatConfig) Gather(acc telegraf.Accumulator) error {
 
 	//--- Get Datastores info
 	if vcs.DatastoreInstances {
-		if err = vcs.vcc.CollectDatastoresInfo(vcs.ctx, acc); err != nil {
+		if err = col.CollectDatastoresInfo(vcs.ctx, acc); err != nil {
 			return gatherError(acc, err)
 		}
 	}
@@ -177,29 +201,33 @@ func (vcs *vcstatConfig) Gather(acc telegraf.Accumulator) error {
 }
 
 // gatherHost gathers info and stats per host
-func (vcs *vcstatConfig) gatherHost(acc telegraf.Accumulator) error {
-	var err error
+func (vcs *VCstatConfig) gatherHost(acc telegraf.Accumulator) error {
+	var (
+		col *vccollector.VcCollector
+		err error
+	)
 
+	col = vcs.vcc
 	if vcs.HostInstances {
-		if err = vcs.vcc.CollectHostInfo(vcs.ctx, acc); err != nil {
+		if err = col.CollectHostInfo(vcs.ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostHBAInstances {
-		if err = vcs.vcc.CollectHostHBA(vcs.ctx, acc); err != nil {
+		if err = col.CollectHostHBA(vcs.ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostNICInstances {
-		if err = vcs.vcc.CollectHostNIC(vcs.ctx, acc); err != nil {
+		if err = col.CollectHostNIC(vcs.ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostFwInstances {
-		if err = vcs.vcc.CollectHostFw(vcs.ctx, acc); err != nil {
+		if err = col.CollectHostFw(vcs.ctx, acc); err != nil {
 			return err
 		}
 	}
@@ -208,17 +236,21 @@ func (vcs *vcstatConfig) gatherHost(acc telegraf.Accumulator) error {
 }
 
 // gatherNetwork gathers network entities info
-func (vcs *vcstatConfig) gatherNetwork(acc telegraf.Accumulator) error {
-	var err error
+func (vcs *VCstatConfig) gatherNetwork(acc telegraf.Accumulator) error {
+	var (
+		col *vccollector.VcCollector
+		err error
+	)
 
+	col = vcs.vcc
 	if vcs.NetDVSInstances {
-		if err = vcs.vcc.CollectNetDVS(vcs.ctx, acc); err != nil {
+		if err = col.CollectNetDVS(vcs.ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.NetDVPInstances {
-		if err = vcs.vcc.CollectNetDVP(vcs.ctx, acc); err != nil {
+		if err = col.CollectNetDVP(vcs.ctx, acc); err != nil {
 			return err
 		}
 	}

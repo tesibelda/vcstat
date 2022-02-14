@@ -35,10 +35,8 @@ func (c *VcCollector) CollectHostInfo(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.hosts) == 0 {
-		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersClustersAndHosts(ctx, false); err != nil {
+		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -48,9 +46,19 @@ func (c *VcCollector) CollectHostInfo(
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
 				if err, exit := govQueryError(err); exit {
-					return err
+					return fmt.Errorf(
+						"Could not get host %s summary property: %w",
+						host.Name(),
+						err,
+					)
 				}
-				acc.AddError(fmt.Errorf("Could not get host summary property: %w", err))
+				acc.AddError(
+					fmt.Errorf(
+						"Could not get host %s summary property: %w",
+						host.Name(),
+						err,
+					),
+				)
 				continue
 			}
 			c.hostsRInfo[i][j] = hsMo.Summary.Runtime
@@ -94,10 +102,8 @@ func (c *VcCollector) CollectHostHBA(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.hosts) == 0 {
-		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersClustersAndHosts(ctx, false); err != nil {
+		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -175,10 +181,8 @@ func (c *VcCollector) CollectHostNIC(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.hosts) == 0 {
-		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersClustersAndHosts(ctx, false); err != nil {
+		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -257,10 +261,8 @@ func (c *VcCollector) CollectHostFw(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.hosts) == 0 {
-		if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersClustersAndHosts(ctx, false); err != nil {
+		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {

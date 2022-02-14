@@ -8,19 +8,9 @@ package vccollector
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	"github.com/vmware/govmomi/find"
-	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25/types"
-)
-
-const (
-	StrAsterisk = "*"
-	StrErrorNotFoud = "'*' not found"
 )
 
 // CollectDatacenterInfo gathers datacenter info
@@ -35,9 +25,8 @@ func (c *VcCollector) CollectDatacenterInfo(
 	}
 
 	if err = c.getAllDatacentersEntities(ctx); err != nil {
-		return err
+		return fmt.Errorf("Could not get all datacenter entity lists: %w", err)
 	}
-
 	for i, dc := range c.dcs {
 		dctags := getDcTags(
 			c.client.Client.URL().Host,
@@ -57,157 +46,25 @@ func (c *VcCollector) CollectDatacenterInfo(
 }
 
 func (c *VcCollector) getAllDatacentersEntities(ctx context.Context) error {
-	var (
-		numdcs, numdcsbefore int
-		err                  error
-	)
-
-	if len(c.dcs) == 0 {
-		if err := c.getDatacenters(ctx); err != nil {
-			return err
-		}
+	if time.Since(c.lastUpdate) < c.dataDuration {
+		return nil
+	}
+	err := c.getDatacenters(ctx)
+	if err != nil {
+		return err
 	}
 
-	// resize VcCollector number of DCs changed
-	numdcs = len(c.dcs)
-	numdcsbefore = len(c.clusters)
-	if numdcs != numdcsbefore {
-		if numdcs > 0 {
-			c.clusters = make([][]*object.ClusterComputeResource, numdcs)
-			c.dss = make([][]*object.Datastore, numdcs)
-			c.hosts = make([][]*object.HostSystem, numdcs)
-			c.hostsRInfo = make([][]*types.HostRuntimeInfo, numdcs)
-			c.nets = make([][]object.NetworkReference, numdcs)
-		} else {
-			c.clusters = nil
-			c.dss = nil
-			c.hosts = nil
-			c.hostsRInfo = nil
-			c.nets = nil
-		}
+	if err = c.getAllDatacentersClustersAndHosts(ctx, true); err != nil {
+		return err
 	}
-
-	for i, dc := range c.dcs {
-		if err = c.getDatacenterEntities(ctx, dc, i); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersNetworks(ctx, true); err != nil {
+		return err
+	}
+	if err = c.getAllDatacentersDatastores(ctx, false); err != nil {
+		return err
 	}
 
 	return err
-}
-
-func (c *VcCollector) getDatacenterEntities(
-	ctx context.Context,
-	dc *object.Datacenter,
-	idx int,
-) error {
-	var err error
-
-	finder := find.NewFinder(c.client.Client, false)
-	finder.SetDatacenter(dc)
-
-	// clusters
-	if c.clusters[idx], err = finder.ClusterComputeResourceList(ctx, StrAsterisk); err != nil {
-		if !strings.Contains(err.Error(), StrErrorNotFoud) {
-			return fmt.Errorf("Could not get datacenter cluster list: %w", err)
-		}
-	}
-
-	// hosts
-	if c.hosts[idx], err = finder.HostSystemList(ctx, StrAsterisk); err != nil {
-		return fmt.Errorf("Could not get datacenter node list: %w", err)
-	}
-
-	// networks (dvs,dvp,..)
-	if c.nets[idx], err = finder.NetworkList(ctx, StrAsterisk); err != nil {
-		if !strings.Contains(err.Error(), StrErrorNotFoud) {
-			return fmt.Errorf("Could not get datacenter network list %w", err)
-		}
-	}
-
-	// datastores
-	if c.dss[idx], err = finder.DatastoreList(ctx, StrAsterisk); err != nil {
-		if !strings.Contains(err.Error(), StrErrorNotFoud) {
-			return fmt.Errorf("Could not get datacenter datastore list %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) error {
-	var err error
-
-	if len(c.dcs) == 0 {
-		if err := c.getDatacenters(ctx); err != nil {
-			return err
-		}
-	}
-
-	for i, dc := range c.dcs {
-		finder := find.NewFinder(c.client.Client, false)
-		finder.SetDatacenter(dc)
-	
-		// clusters
-		if c.clusters[i], err = finder.ClusterComputeResourceList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
-				return fmt.Errorf("Could not get datacenter cluster list: %w", err)
-			}
-		}
-	
-		// hosts
-		if c.hosts[i], err = finder.HostSystemList(ctx, StrAsterisk); err != nil {
-			return fmt.Errorf("Could not get datacenter node list: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (c *VcCollector) getAllDatacentersNetworks(ctx context.Context) error {
-	var err error
-
-	if len(c.dcs) == 0 {
-		if err := c.getDatacenters(ctx); err != nil {
-			return err
-		}
-	}
-
-	for i, dc := range c.dcs {
-		finder := find.NewFinder(c.client.Client, false)
-		finder.SetDatacenter(dc)
-	
-		if c.nets[i], err = finder.NetworkList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
-				return fmt.Errorf("Could not get datacenter network list %w", err)
-			}
-		}
-	 }
-
-	return nil
-}
-
-func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
-	var err error
-
-	if len(c.dcs) == 0 {
-		if err := c.getDatacenters(ctx); err != nil {
-			return err
-		}
-	}
-
-	for i, dc := range c.dcs {
-		finder := find.NewFinder(c.client.Client, false)
-		finder.SetDatacenter(dc)
-	
-		if c.dss[i], err = finder.DatastoreList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
-				return fmt.Errorf("Could not get datacenter datastore list %w", err)
-			}
-		}
-	}
-
-	return nil
 }
 
 func getDcTags(vcenter, dcname, moid string) map[string]string {

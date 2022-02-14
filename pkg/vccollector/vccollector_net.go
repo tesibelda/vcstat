@@ -36,10 +36,8 @@ func (c *VcCollector) CollectNetDVS(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.nets) == 0 {
-		if err = c.getAllDatacentersNetworks(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersNetworks(ctx, false); err != nil {
+		return fmt.Errorf("Could not get network entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -106,10 +104,8 @@ func (c *VcCollector) CollectNetDVP(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.nets) == 0 {
-		if err = c.getAllDatacentersNetworks(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersNetworks(ctx, false); err != nil {
+		return fmt.Errorf("Could not get network entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {

@@ -13,7 +13,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/common/shim"
-	_ "github.com/tesibelda/vcstat/plugins/inputs/vcstat"
+
+	"github.com/tesibelda/vcstat/plugins/inputs/vcstat"
 )
 
 var pollInterval = flag.Duration(
@@ -47,14 +48,24 @@ func main() {
 	// otherwise follow what the config asks for.
 	// Check for settings from a config toml file,
 	// (or just use whatever plugins were imported above)
-	err = shim.LoadConfig(configFile)
-	if err != nil {
+	if err = shim.LoadConfig(configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %s\n", err)
 		os.Exit(1)
 	}
 
+	// Tell vcstat shim the configured polling interval
+	vcCfg, ok := shim.Input.(*vcstat.VCstatConfig)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error getting shim input as VCstatConfig\n")
+		os.Exit(1)
+	}
+	if err = vcCfg.SetPollInterval(*pollInterval); err != nil {
+		fmt.Fprintf(os.Stderr, "Error setting vcstat shim polling interval: %s\n", err)
+		os.Exit(1)
+	}
+
 	// run a single plugin until stdin closes or we receive a termination signal
-	if err := shim.Run(*pollInterval); err != nil {
+	if err = shim.Run(*pollInterval); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running telegraf shim: %s\n", err)
 		os.Exit(2)
 	}

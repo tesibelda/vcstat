@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	"github.com/vmware/govmomi/find"
 )
 
 // CollectVcenterInfo gathers basic vcenter info
@@ -40,17 +38,6 @@ func (c *VcCollector) CollectVcenterInfo(
 	acc.AddFields("vcstat_vcenter", vcfields, vctags, time.Now())
 
 	return nil
-}
-
-func (c *VcCollector) getDatacenters(ctx context.Context) error {
-	var err error
-
-	finder := find.NewFinder(c.client.Client, false)
-	if c.dcs, err = finder.DatacenterList(ctx, "*"); err != nil {
-		return fmt.Errorf("Could not get datacenter list: %w", err)
-	}
-
-	return err
 }
 
 func getVcenterTags(vcenter string) map[string]string {

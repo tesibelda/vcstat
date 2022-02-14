@@ -20,7 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 
 	"github.com/vmware/govmomi"
-	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
@@ -30,15 +29,11 @@ import (
 // VcCollector struct contains session and entities of a vCenter
 type VcCollector struct {
 	tls.ClientConfig
-	urlString  string
-	url        *url.URL
-	client     *govmomi.Client
-	dcs        []*object.Datacenter
-	clusters   [][]*object.ClusterComputeResource
-	dss        [][]*object.Datastore
-	hosts      [][]*object.HostSystem
-	hostsRInfo [][]*types.HostRuntimeInfo
-	nets       [][]object.NetworkReference
+	urlString    string
+	url          *url.URL
+	client       *govmomi.Client
+	dataDuration time.Duration
+	VcCache
 }
 
 // Common errors raised by vccollector
@@ -53,12 +48,15 @@ func NewVCCollector(
 	ctx context.Context,
 	vcenterUrl, user, pass string,
 	clicfg *tls.ClientConfig,
+	dataDuration time.Duration,
 ) (*VcCollector, error) {
 	var err error
 
 	vcc := VcCollector{
-		urlString: vcenterUrl,
+		urlString:    vcenterUrl,
+		dataDuration: dataDuration,
 	}
+	vcc.lastUpdate = time.Now().AddDate(0, 0, -1)
 	vcc.TLSCA = clicfg.TLSCA
 	vcc.InsecureSkipVerify = clicfg.InsecureSkipVerify
 
@@ -74,16 +72,20 @@ func NewVCCollector(
 	return &vcc, err
 }
 
+// Set max cache data duration
+func (c *VcCollector) SetDataDuration(pollInterval time.Duration) error {
+	c.dataDuration = pollInterval
+	return nil
+}
+
 // Open opens a vCenter connection session or relogin if session already exists
 func (c *VcCollector) Open(ctx context.Context) error {
 	var err error
 
 	// set a default 5s login timeout
-	ctx1, cancel1 := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel1()
 	if c.client != nil {
 		// Try to relogin and if not possible reopen session
-		if err = c.client.Login(ctx1, c.url.User); err != nil {
+		if err = c.client.Login(ctx, c.url.User); err != nil {
 			c.Close(ctx)
 			if err = c.Open(ctx); err != nil {
 				return err
@@ -94,9 +96,9 @@ func (c *VcCollector) Open(ctx context.Context) error {
 
 		// Create a vSphere vCenter client using CA if provided
 		if c.TLSCA == "" {
-			cli, err = govmomi.NewClient(ctx1, c.url, c.InsecureSkipVerify)
+			cli, err = govmomi.NewClient(ctx, c.url, c.InsecureSkipVerify)
 		} else {
-			cli, err = c.newCAClient(ctx1)
+			cli, err = c.newCAClient(ctx)
 		}
 		if err != nil {
 			return err
@@ -129,9 +131,7 @@ func (c *VcCollector) IsActive(ctx context.Context) bool {
 // Close closes vCenter connection
 func (c *VcCollector) Close(ctx context.Context) {
 	if c.client != nil {
-		ctx1, cancel1 := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel1()
-		c.client.Logout(ctx1) //nolint   //no need for logout error checking
+		c.client.Logout(ctx) //nolint   //no need for logout error checking
 		c.client = nil
 	}
 }
@@ -174,7 +174,7 @@ func entityStatusCode(status types.ManagedEntityStatus) int16 {
 	}
 }
 
-// govQueryError returns false if error is light and we may continue quering or not 
+// govQueryError returns false if error is light and we may continue quering or not
 func govQueryError(err error) (error, bool) {
 	if err == context.Canceled {
 		return err, true

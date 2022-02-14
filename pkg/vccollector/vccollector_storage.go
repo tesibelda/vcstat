@@ -32,10 +32,8 @@ func (c *VcCollector) CollectDatastoresInfo(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if len(c.dss) == 0 {
-		if err = c.getAllDatacentersDatastores(ctx); err != nil {
-			return err
-		}
+	if err = c.getAllDatacentersDatastores(ctx, false); err != nil {
+		return fmt.Errorf("Could not get datastore entity list: %w", err)
 	}
 
 	pc := property.DefaultCollector(c.client.Client)
