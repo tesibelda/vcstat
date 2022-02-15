@@ -46,21 +46,18 @@ func (c *VcCollector) CollectDatacenterInfo(
 }
 
 func (c *VcCollector) getAllDatacentersEntities(ctx context.Context) error {
-	if time.Since(c.lastUpdate) < c.dataDuration {
-		return nil
-	}
 	err := c.getDatacenters(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err = c.getAllDatacentersClustersAndHosts(ctx, true); err != nil {
+	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return err
 	}
-	if err = c.getAllDatacentersNetworks(ctx, true); err != nil {
+	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return err
 	}
-	if err = c.getAllDatacentersDatastores(ctx, false); err != nil {
+	if err = c.getAllDatacentersDatastores(ctx); err != nil {
 		return err
 	}
 

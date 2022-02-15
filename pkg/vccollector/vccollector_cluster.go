@@ -33,7 +33,7 @@ func (c *VcCollector) CollectClusterInfo(
 	if c.client == nil {
 		return fmt.Errorf(string(Error_NoClient))
 	}
-	if err = c.getAllDatacentersClustersAndHosts(ctx, false); err != nil {
+	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 

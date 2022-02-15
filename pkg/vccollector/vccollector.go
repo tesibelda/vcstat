@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -56,7 +57,6 @@ func NewVCCollector(
 		urlString:    vcenterUrl,
 		dataDuration: dataDuration,
 	}
-	vcc.lastUpdate = time.Now().AddDate(0, 0, -1)
 	vcc.TLSCA = clicfg.TLSCA
 	vcc.InsecureSkipVerify = clicfg.InsecureSkipVerify
 
@@ -83,9 +83,11 @@ func (c *VcCollector) Open(ctx context.Context) error {
 	var err error
 
 	// set a default 5s login timeout
+	ctx1, cancel1 := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel1()
 	if c.client != nil {
 		// Try to relogin and if not possible reopen session
-		if err = c.client.Login(ctx, c.url.User); err != nil {
+		if err = c.client.Login(ctx1, c.url.User); err != nil {
 			c.Close(ctx)
 			if err = c.Open(ctx); err != nil {
 				return err
@@ -96,9 +98,9 @@ func (c *VcCollector) Open(ctx context.Context) error {
 
 		// Create a vSphere vCenter client using CA if provided
 		if c.TLSCA == "" {
-			cli, err = govmomi.NewClient(ctx, c.url, c.InsecureSkipVerify)
+			cli, err = govmomi.NewClient(ctx1, c.url, c.InsecureSkipVerify)
 		} else {
-			cli, err = c.newCAClient(ctx)
+			cli, err = c.newCAClient(ctx1)
 		}
 		if err != nil {
 			return err
@@ -121,7 +123,12 @@ func (c *VcCollector) IsActive(ctx context.Context) bool {
 	if c.client != nil {
 		var err error
 		if ok, err = c.client.SessionManager.SessionIsActive(ctx); err != nil {
-			return false
+			// skip permission denied error for SessionIsActive call
+			if strings.Contains(err.Error(), "Permission") {
+				return true
+			} else {
+				return false
+			}
 		}
 	}
 

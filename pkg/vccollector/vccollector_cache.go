@@ -1,4 +1,4 @@
-// This file contains vccollector methods to gathers stats about datacenters
+// This file contains vccollector methods to cache vCenter entities
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
@@ -23,14 +23,15 @@ const (
 
 type VcCache struct {
 	lastDCUpdate time.Time
+	lastCHUpdate time.Time
+	lastDsUpdate time.Time
+	lastNtUpdate time.Time
 	dcs          []*object.Datacenter
-
-	lastUpdate time.Time
-	clusters   [][]*object.ClusterComputeResource
-	dss        [][]*object.Datastore
-	hosts      [][]*object.HostSystem
-	hostsRInfo [][]*types.HostRuntimeInfo
-	nets       [][]object.NetworkReference
+	clusters     [][]*object.ClusterComputeResource
+	dss          [][]*object.Datastore
+	hosts        [][]*object.HostSystem
+	hostsRInfo   [][]*types.HostRuntimeInfo
+	nets         [][]object.NetworkReference
 }
 
 func (c *VcCollector) getDatacenters(ctx context.Context) error {
@@ -49,11 +50,8 @@ func (c *VcCollector) getDatacenters(ctx context.Context) error {
 	return err
 }
 
-func (c *VcCollector) getAllDatacentersClustersAndHosts(
-	ctx context.Context,
-	moreEntities bool,
-) error {
-	if time.Since(c.lastUpdate) < c.dataDuration {
+func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) error {
+	if time.Since(c.lastCHUpdate) < c.dataDuration {
 		return nil
 	}
 	err := c.getDatacenters(ctx)
@@ -90,18 +88,13 @@ func (c *VcCollector) getAllDatacentersClustersAndHosts(
 			return fmt.Errorf("Could not get datacenter node list: %w", err)
 		}
 	}
-	if !moreEntities {
-		c.lastUpdate = time.Now()
-	}
+	c.lastCHUpdate = time.Now()
 
 	return nil
 }
 
-func (c *VcCollector) getAllDatacentersNetworks(
-	ctx context.Context,
-	moreEntities bool,
-) error {
-	if time.Since(c.lastUpdate) < c.dataDuration {
+func (c *VcCollector) getAllDatacentersNetworks(ctx context.Context) error {
+	if time.Since(c.lastNtUpdate) < c.dataDuration {
 		return nil
 	}
 	err := c.getDatacenters(ctx)
@@ -128,18 +121,13 @@ func (c *VcCollector) getAllDatacentersNetworks(
 			}
 		}
 	}
-	if !moreEntities {
-		c.lastUpdate = time.Now()
-	}
+	c.lastNtUpdate = time.Now()
 
 	return nil
 }
 
-func (c *VcCollector) getAllDatacentersDatastores(
-	ctx context.Context,
-	moreEntities bool,
-) error {
-	if time.Since(c.lastUpdate) < c.dataDuration {
+func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
+	if time.Since(c.lastDsUpdate) < c.dataDuration {
 		return nil
 	}
 	err := c.getDatacenters(ctx)
@@ -166,9 +154,7 @@ func (c *VcCollector) getAllDatacentersDatastores(
 			}
 		}
 	}
-	if !moreEntities {
-		c.lastUpdate = time.Now()
-	}
+	c.lastDsUpdate = time.Now()
 
 	return nil
 }
