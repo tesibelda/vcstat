@@ -59,9 +59,9 @@ Use telegraf v1.14 or above so that execd input is available.
 
 * Edit vcstat.conf file as needed (see above)
 
-* Run vcstat with -config argument using that file.
+* Run vcstat with --config argument using that file.
 ```
-/path/to/vcstat -config /path/to/vcstat.conf
+/path/to/vcstat --config /path/to/vcstat.conf
 ```
 
 * Wait for 1 minute or press enter. You should see lines like those in the Example output below.
@@ -189,6 +189,12 @@ Use telegraf v1.14 or above so that execd input is available.
     - status (string)
     - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
     - num_ports (int)
+- internal_vcstat
+  - tags:
+    - vcenter
+  - fields:
+    - sessions_created (int)
+    - gather_time_ns (int)
 
 # Example output
 
@@ -203,6 +209,7 @@ vcstat_host_nic,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,e
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommited=20511i,maintenance_mode="normal" 1639585702303440200
+internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i 1639585702303440300
 ```
 
 # Build Instructions

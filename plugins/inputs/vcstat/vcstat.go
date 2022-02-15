@@ -7,11 +7,14 @@ package vcstat
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/selfstat"
 
 	"github.com/tesibelda/vcstat/pkg/vccollector"
 )
@@ -36,6 +39,9 @@ type VCstatConfig struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	vcc          *vccollector.VcCollector
+
+	SessionsCreated selfstat.Stat
+	GatherTime      selfstat.Stat
 }
 
 var sampleConfig = `
@@ -106,14 +112,22 @@ func (vcs *VCstatConfig) Init() error {
 		vcs.pollInterval,
 	)
 
-	return err
-}
-
-// Start is called from telegraf core when a plugin is started
-func (vcs *VCstatConfig) Start() {
-	// Set vccollector dataduration as half the telegraf shim polling interval
+	// Set vccollector dataduration as half of the telegraf shim polling interval
 	dd := time.Duration(vcs.pollInterval.Seconds() / 2)
 	vcs.vcc.SetDataDuration(dd)
+
+	// selfmonitoring
+	u, err := url.Parse(vcs.VCenter)
+	if err != nil {
+		return fmt.Errorf("Error parsing URL for vcenter: %w", err)
+	}
+	tags := map[string]string{
+		"vcenter": u.Hostname(),
+	}
+	vcs.SessionsCreated = selfstat.Register("vcstat", "sessions_created", tags)
+	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)
+
+	return err
 }
 
 // Stop is called from telegraf core when a plugin is stopped and allows it to
@@ -146,8 +160,9 @@ func (vcs *VCstatConfig) Description() string {
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	var (
-		col *vccollector.VcCollector
-		err error
+		col       *vccollector.VcCollector
+		startTime time.Time
+		err       error
 	)
 
 	//--- re-Init if needed
@@ -158,10 +173,16 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	}
 	col = vcs.vcc
 	if !col.IsActive(vcs.ctx) {
+		if vcs.SessionsCreated.Get() > 0 {
+			acc.AddError(fmt.Errorf("vCenter session not active, re-authenticating..."))
+		}
 		if err = col.Open(vcs.ctx); err != nil {
 			return gatherError(acc, err)
 		}
+		vcs.SessionsCreated.Incr(1)
 	}
+
+	startTime = time.Now()
 
 	//--- Get vCenter basic stats
 	if err = col.CollectVcenterInfo(vcs.ctx, acc); err != nil {
@@ -194,6 +215,14 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	if vcs.DatastoreInstances {
 		if err = col.CollectDatastoresInfo(vcs.ctx, acc); err != nil {
 			return gatherError(acc, err)
+		}
+	}
+
+	// selfmonitoring
+	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
+	for _, m := range selfstat.Metrics() {
+		if m.Name() != "internal_agent" {
+			acc.AddMetric(m)
 		}
 	}
 
