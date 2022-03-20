@@ -66,136 +66,6 @@ Use telegraf v1.14 or above so that execd input is available.
 
 * Wait for 1 minute or press enter. You should see lines like those in the Example output below.
 
-# Metrics
-
-- vcstat_vcenter
-  - tags:
-    - vcenter
-  - fields:
-    - name (string)
-    - num_datacenters (int)
-    - ostype (string)
-    - version (string)
-    - build (string)
-- vcstat_datacenter
-  - tags:
-    - vcenter
-    - dcname
-  - fields:
-    - num_clusters (int)
-    - num_datastores (int)
-    - num_hosts (int)
-    - num_networks (int)
-- vcstat_cluster
-  - tags:
-    - clustername
-	- moid
-    - vcenter
-    - dcname
-  - fields:
-	- status (string)
-	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
-	- num_hosts (int)
-	- num_effective_hosts (int)
-	- num_cpu_cores (int)
-	- num_cpu_threads (int)
-	- total_cpu (int)
-	- total_memory (int)
-	- effective_cpu (int)
-	- effective_memory (int)
-- vcstat_datastore
-  - tags:
-    - dsname
-	- moid
-    - type
-    - vcenter
-    - dcname
-  - fields:
-	- accessible (bool)
-	- capacity (int)
-	- freespace (int)
-	- uncommited (int)
-	- maintenance_mode (string)
-- vcstat_host
-  - tags:
-    - esxhostname
-	- moid
-    - vcenter
-    - dcname
-    - clustername
-  - fields:
-	- status (string)
-	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
-	- reboot_required (int)
-	- in_maintenance_mode (int)
-	- connection_state (int)
-	- connection_state_code (int)
-- vcstat_host_firewall
-  - tags:
-    - esxhostname
-    - vcenter
-    - dcname
-    - clustername
-  - fields:
-	- defaultaction (string)
-	- enabled (bool)
-	- loaded (bool)
-- vcstat_host_hba
-  - tags:
-	- device
-	- driver
-    - esxhostname
-    - vcenter
-    - dcname
-    - clustername
-  - fields:
-	- link_state (string) 0-link-up, 1-link-n/a, 2-unbound, 3-link-down
-	- link_state_code (int)
-- vcstat_host_nic
-  - tags:
-	- device
-	- driver
-    - esxhostname
-    - vcenter
-    - dcname
-    - clustername
-  - fields:
-	- link_status (string)
-	- link_status_code (int) 0-Up, 1-Unknown, 2-Down
-	- admin_status (string)
-	- duplex (string)
-	- speed (int)
-	- mac (string)
-- vcstat_net_dvs
-  - tags:
-    - dvs
-	- moid
-    - vcenter
-    - dcname
-  - fields:
-    - status (string)
-    - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
-    - num_ports (int)
-    - max_ports (int)
-    - num_standalone_ports (int)
-- vcstat_net_dvp
-  - tags:
-    - dvp
-	- moid
-    - vcenter
-    - dcname
-    - uplink (true/false)
-  - fields:
-    - status (string)
-    - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
-    - num_ports (int)
-- internal_vcstat
-  - tags:
-    - vcenter
-  - fields:
-    - sessions_created (int)
-    - gather_time_ns (int)
-
 # Example output
 
 ```plain
@@ -211,6 +81,9 @@ vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplin
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommited=20511i,maintenance_mode="normal" 1639585702303440200
 internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i 1639585702303440300
 ```
+
+# Metrics
+[Metrics](https://github.com/tesibelda/vcstat/METRICS.md)
 
 # Build Instructions
 
@@ -246,6 +119,11 @@ If you want to say **thank you** or/and support active development of vcstat:
 
 - Add a [GitHub Star](https://github.com/tesibelda/vcstat) to the project.
 - Write interesting articles about the project on [Dev.to](https://dev.to/), [Medium](https://medium.com/) or your personal blog.
+
+# Disclaimer
+
+The author and maintainers are not affiliated with VMware.
+VMware is a registered trademark or trademark of VMware, Inc.
 
 # License
 
