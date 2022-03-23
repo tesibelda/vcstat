@@ -79,17 +79,17 @@ func (c *VcCollector) SetDataDuration(pollInterval time.Duration) error {
 }
 
 // Open opens a vCenter connection session or relogin if session already exists
-func (c *VcCollector) Open(ctx context.Context) error {
+func (c *VcCollector) Open(ctx context.Context, timeout time.Duration) error {
 	var err error
 
-	// set a default 5s login timeout
-	ctx1, cancel1 := context.WithTimeout(ctx, 5*time.Second)
+	// set a login timeout
+	ctx1, cancel1 := context.WithTimeout(ctx, timeout)
 	defer cancel1()
 	if c.client != nil {
 		// Try to relogin and if not possible reopen session
 		if err = c.client.Login(ctx1, c.url.User); err != nil {
 			c.Close(ctx)
-			if err = c.Open(ctx); err != nil {
+			if err = c.Open(ctx, timeout); err != nil {
 				return err
 			}
 		}
