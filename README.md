@@ -85,7 +85,7 @@ internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839
 ```
 
 # Metrics
-[Metrics](https://github.com/tesibelda/vcstat/METRICS.md)
+See [Metrics](https://github.com/tesibelda/vcstat/blob/master/METRICS.md)
 
 # Build Instructions
 
