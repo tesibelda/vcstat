@@ -22,9 +22,9 @@ import (
 
 type VCstatConfig struct {
 	tls.ClientConfig
-	VCenter  string          `toml:"vcenter"`
-	Username string          `toml:"username"`
-	Password string          `toml:"password"`
+	VCenter  string `toml:"vcenter"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 	Timeout  config.Duration
 	Log      telegraf.Logger `toml:"-"`
 
@@ -115,9 +115,12 @@ func (vcs *VCstatConfig) Init() error {
 		&vcs.ClientConfig,
 		vcs.pollInterval,
 	)
+	if err != nil {
+ 		return err
+ 	}
 
 	// Set vccollector dataduration as half of the telegraf shim polling interval
-	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
+	_ = vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
 
 	// selfmonitoring
 	u, err := url.Parse(vcs.VCenter)

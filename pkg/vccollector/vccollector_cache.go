@@ -22,16 +22,16 @@ const (
 )
 
 type VcCache struct {
-	lastDCUpdate time.Time
-	lastCHUpdate time.Time
-	lastDsUpdate time.Time
-	lastNtUpdate time.Time
-	dcs          []*object.Datacenter
-	clusters     [][]*object.ClusterComputeResource
-	dss          [][]*object.Datastore
-	hosts        [][]*object.HostSystem
-	hostsRInfo   [][]*types.HostRuntimeInfo
-	nets         [][]object.NetworkReference
+	lastDCUpdate time.Time   //nolint
+	lastCHUpdate time.Time   //nolint
+	lastDsUpdate time.Time   //nolint
+	lastNtUpdate time.Time   //nolint
+	dcs          []*object.Datacenter                //nolint
+	clusters     [][]*object.ClusterComputeResource  //nolint
+	dss          [][]*object.Datastore               //nolint
+	hosts        [][]*object.HostSystem              //nolint
+	hostsRInfo   [][]*types.HostRuntimeInfo          //nolint
+	nets         [][]object.NetworkReference         //nolint
 }
 
 func (c *VcCollector) getDatacenters(ctx context.Context) error {
@@ -157,4 +157,13 @@ func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
 	c.lastDsUpdate = time.Now()
 
 	return nil
+}
+
+func hostRInfoSliceContainsNotNil(slice []*types.HostRuntimeInfo) bool {
+	for _, v := range slice {
+		if v != nil {
+			return true
+		}
+	}
+	return false
 }

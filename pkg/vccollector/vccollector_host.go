@@ -371,7 +371,13 @@ func (c *VcCollector) isHostConnectedIdx(dcindex, hostindex int) bool {
 		return true
 	}
 	if len(c.hosts) <= dcindex || len(c.hosts[dcindex]) <= hostindex {
-		return connected
+		return false
+	}
+	if c.hostsRInfo[dcindex][hostindex] == nil {
+		if hostindex >= 0 && hostRInfoSliceContainsNotNil(c.hostsRInfo[dcindex]) {
+			return false
+		}
+		return true
 	}
 	connectedString := c.hostsRInfo[dcindex][hostindex].ConnectionState
 	if connectedString == types.HostSystemConnectionStateConnected {
