@@ -21,6 +21,8 @@ Use telegraf v1.14 or above so that execd input is available.
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
+  ## number of intervals to skip not responding to esxcli commands hosts
+  # intervals_skip_notresponding_hosts = 30
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"
@@ -81,7 +83,7 @@ vcstat_host_nic,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,e
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommited=20511i,maintenance_mode="normal" 1639585702303440200
-internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i 1639585702303440300
+internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i,notresponding_hosts=0i 1639585702303440300
 ```
 
 # Metrics

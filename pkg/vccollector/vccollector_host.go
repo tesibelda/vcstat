@@ -41,7 +41,6 @@ func (c *VcCollector) CollectHostInfo(
 
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
-		c.hostsRInfo[i] = make([]*types.HostRuntimeInfo, len(hosts))
 		for j, host := range hosts {
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
@@ -61,7 +60,9 @@ func (c *VcCollector) CollectHostInfo(
 				)
 				continue
 			}
-			c.hostsRInfo[i][j] = hsMo.Summary.Runtime
+			c.hostStates[i][j].setNotConnected(
+				hsMo.Summary.Runtime.ConnectionState != types.HostSystemConnectionStateConnected,
+			)
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
 			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
 
@@ -109,7 +110,7 @@ func (c *VcCollector) CollectHostHBA(
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
 		for j, host := range hosts {
-			if !c.isHostConnectedIdx(i, j) {
+			if !c.isHostConnectedRespondingIdx(i, j) {
 				continue
 			}
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
@@ -134,6 +135,7 @@ func (c *VcCollector) CollectHostHBA(
 						err,
 					),
 				)
+				c.hostStates[i][j].setNotResponding(true)
 				continue
 			}
 
@@ -188,7 +190,7 @@ func (c *VcCollector) CollectHostNIC(
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
 		for j, host := range hosts {
-			if !c.isHostConnectedIdx(i, j) {
+			if !c.isHostConnectedRespondingIdx(i, j) {
 				continue
 			}
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
@@ -212,6 +214,7 @@ func (c *VcCollector) CollectHostNIC(
 						err,
 					),
 				)
+				c.hostStates[i][j].setNotResponding(true)
 				continue
 			}
 
@@ -268,7 +271,7 @@ func (c *VcCollector) CollectHostFw(
 	for i, dc := range c.dcs {
 		hosts = c.hosts[i]
 		for j, host := range hosts {
-			if !c.isHostConnectedIdx(i, j) {
+			if !c.isHostConnectedRespondingIdx(i, j) {
 				continue
 			}
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
@@ -292,6 +295,7 @@ func (c *VcCollector) CollectHostFw(
 						err,
 					),
 				)
+				c.hostStates[i][j].setNotResponding(true)
 				continue
 			}
 
@@ -345,46 +349,6 @@ func (c *VcCollector) getClusterFromHost(dcindex int, host *object.HostSystem) s
 	}
 
 	return ""
-}
-
-func (c *VcCollector) IsHostConnected(dc *object.Datacenter, host *object.HostSystem) bool {
-	var connected bool
-
-	for i, searcdc := range c.dcs {
-		if searcdc == dc {
-			for j, searchost := range c.hosts[i] {
-				if searchost == host {
-					connected = c.isHostConnectedIdx(i, j)
-					break
-				}
-			}
-		}
-	}
-
-	return connected
-}
-
-func (c *VcCollector) isHostConnectedIdx(dcindex, hostindex int) bool {
-	var connected bool
-
-	if len(c.hostsRInfo) <= dcindex || len(c.hostsRInfo[dcindex]) <= hostindex {
-		return true
-	}
-	if len(c.hosts) <= dcindex || len(c.hosts[dcindex]) <= hostindex {
-		return false
-	}
-	if c.hostsRInfo[dcindex][hostindex] == nil {
-		if hostindex >= 0 && hostRInfoSliceContainsNotNil(c.hostsRInfo[dcindex]) {
-			return false
-		}
-		return true
-	}
-	connectedString := c.hostsRInfo[dcindex][hostindex].ConnectionState
-	if connectedString == types.HostSystemConnectionStateConnected {
-		connected = true
-	}
-
-	return connected
 }
 
 // hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting from telegraf metrics

@@ -127,3 +127,4 @@
   - fields:
     - sessions_created (int)
     - gather_time_ns (int)
+	- notresponding_hosts (int)

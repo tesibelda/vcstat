@@ -30,10 +30,11 @@ import (
 // VcCollector struct contains session and entities of a vCenter
 type VcCollector struct {
 	tls.ClientConfig
-	urlString    string
-	url          *url.URL
-	client       *govmomi.Client
-	dataDuration time.Duration
+	urlString           string
+	url                 *url.URL
+	client              *govmomi.Client
+	dataDuration        time.Duration
+	skipNotRespondigFor time.Duration
 	VcCache
 }
 
@@ -73,8 +74,14 @@ func NewVCCollector(
 }
 
 // Set max cache data duration
-func (c *VcCollector) SetDataDuration(pollInterval time.Duration) error {
-	c.dataDuration = pollInterval
+func (c *VcCollector) SetDataDuration(du time.Duration) error {
+	c.dataDuration = du
+	return nil
+}
+
+// Set duration to skip not responding to esxcli commands hosts
+func (c *VcCollector) SetSkipNotRespondingDuration(du time.Duration) error {
+	c.skipNotRespondigFor = du
 	return nil
 }
 

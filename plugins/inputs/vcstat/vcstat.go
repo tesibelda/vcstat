@@ -22,11 +22,12 @@ import (
 
 type VCstatConfig struct {
 	tls.ClientConfig
-	VCenter  string `toml:"vcenter"`
-	Username string `toml:"username"`
-	Password string `toml:"password"`
-	Timeout  config.Duration
-	Log      telegraf.Logger `toml:"-"`
+	VCenter             string `toml:"vcenter"`
+	Username            string `toml:"username"`
+	Password            string `toml:"password"`
+	Timeout             config.Duration
+	IntSkipNotRespondig int16           `toml:"intervals_skip_notresponding_hosts"`
+	Log                 telegraf.Logger `toml:"-"`
 
 	ClusterInstances   bool `toml:"cluster_instances"`
 	DatastoreInstances bool `toml:"datastore_instances"`
@@ -42,8 +43,9 @@ type VCstatConfig struct {
 	cancel       context.CancelFunc
 	vcc          *vccollector.VcCollector
 
-	SessionsCreated selfstat.Stat
-	GatherTime      selfstat.Stat
+	GatherTime         selfstat.Stat
+	NotRespondingHosts selfstat.Stat
+	SessionsCreated    selfstat.Stat
 }
 
 var sampleConfig = `
@@ -53,6 +55,8 @@ var sampleConfig = `
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
+  ## number of intervals to skip not responding hosts to esxcli commands
+  # intervals_skip_notresponding_hosts = 30
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"
@@ -82,19 +86,20 @@ func init() {
 	m, _ := time.ParseDuration("60s") //nolint: hardcoded 1m expects no error
 	inputs.Add("vcstat", func() telegraf.Input {
 		return &VCstatConfig{
-			VCenter:            "https://vcenter.local/sdk",
-			Username:           "user@corp.local",
-			Password:           "secret",
-			Timeout:            config.Duration(time.Second * 0),
-			ClusterInstances:   true,
-			DatastoreInstances: false,
-			HostInstances:      true,
-			HostFwInstances:    false,
-			HostHBAInstances:   false,
-			HostNICInstances:   false,
-			NetDVSInstances:    true,
-			NetDVPInstances:    false,
-			pollInterval:       m,
+			VCenter:             "https://vcenter.local/sdk",
+			Username:            "user@corp.local",
+			Password:            "secret",
+			Timeout:             config.Duration(time.Second * 0),
+			IntSkipNotRespondig: 30,
+			ClusterInstances:    true,
+			DatastoreInstances:  false,
+			HostInstances:       true,
+			HostFwInstances:     false,
+			HostHBAInstances:    false,
+			HostNICInstances:    false,
+			NetDVSInstances:     true,
+			NetDVPInstances:     false,
+			pollInterval:        m,
 		}
 	})
 }
@@ -116,11 +121,15 @@ func (vcs *VCstatConfig) Init() error {
 		vcs.pollInterval,
 	)
 	if err != nil {
- 		return err
- 	}
+		return err
+	}
 
 	// Set vccollector dataduration as half of the telegraf shim polling interval
 	_ = vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
+	// Set vccollector duration to skip not responding hosts to esxcli commands
+	_ = vcs.vcc.SetSkipNotRespondingDuration(
+		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
+	)
 
 	// selfmonitoring
 	u, err := url.Parse(vcs.VCenter)
@@ -130,8 +139,9 @@ func (vcs *VCstatConfig) Init() error {
 	tags := map[string]string{
 		"vcenter": u.Hostname(),
 	}
-	vcs.SessionsCreated = selfstat.Register("vcstat", "sessions_created", tags)
 	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)
+	vcs.NotRespondingHosts = selfstat.Register("vcstat", "notresponding_hosts", tags)
+	vcs.SessionsCreated = selfstat.Register("vcstat", "sessions_created", tags)
 
 	return err
 }
@@ -231,6 +241,7 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 
 	// selfmonitoring
 	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
+	vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
 	for _, m := range selfstat.Metrics() {
 		if m.Name() != "internal_agent" {
 			acc.AddMetric(m)

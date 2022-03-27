@@ -13,7 +13,6 @@ import (
 
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25/types"
 )
 
 const (
@@ -21,17 +20,23 @@ const (
 	StrErrorNotFoud = "'*' not found"
 )
 
+type hostState struct {
+	notConnected   bool
+	lastNoResponse time.Time
+	notResponding  bool
+}
+
 type VcCache struct {
-	lastDCUpdate time.Time   //nolint
-	lastCHUpdate time.Time   //nolint
-	lastDsUpdate time.Time   //nolint
-	lastNtUpdate time.Time   //nolint
-	dcs          []*object.Datacenter                //nolint
-	clusters     [][]*object.ClusterComputeResource  //nolint
-	dss          [][]*object.Datastore               //nolint
-	hosts        [][]*object.HostSystem              //nolint
-	hostsRInfo   [][]*types.HostRuntimeInfo          //nolint
-	nets         [][]object.NetworkReference         //nolint
+	lastDCUpdate time.Time                          //nolint
+	lastCHUpdate time.Time                          //nolint
+	lastDsUpdate time.Time                          //nolint
+	lastNtUpdate time.Time                          //nolint
+	dcs          []*object.Datacenter               //nolint
+	clusters     [][]*object.ClusterComputeResource //nolint
+	dss          [][]*object.Datastore              //nolint
+	hosts        [][]*object.HostSystem             //nolint
+	hostStates   [][]hostState                      //nolint
+	nets         [][]object.NetworkReference        //nolint
 }
 
 func (c *VcCollector) getDatacenters(ctx context.Context) error {
@@ -51,25 +56,32 @@ func (c *VcCollector) getDatacenters(ctx context.Context) error {
 }
 
 func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) error {
+	var (
+		err              error
+		numdcs, numhosts int
+		platformChange   bool
+	)
+
 	if time.Since(c.lastCHUpdate) < c.dataDuration {
 		return nil
 	}
-	err := c.getDatacenters(ctx)
+	err = c.getDatacenters(ctx)
 	if err != nil {
 		return err
 	}
 
-	numdcs := len(c.dcs)
+	numdcs = len(c.dcs)
 	if numdcs != len(c.clusters) || numdcs != len(c.hosts) {
 		if numdcs > 0 {
 			c.clusters = make([][]*object.ClusterComputeResource, numdcs)
 			c.hosts = make([][]*object.HostSystem, numdcs)
-			c.hostsRInfo = make([][]*types.HostRuntimeInfo, numdcs)
+			c.hostStates = make([][]hostState, numdcs)
 		} else {
 			c.clusters = nil
 			c.hosts = nil
-			c.hostsRInfo = nil
+			c.hostStates = nil
 		}
+		platformChange = true
 	}
 
 	for i, dc := range c.dcs {
@@ -84,8 +96,15 @@ func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) err
 		}
 
 		// hosts
+		numhosts = len(c.hosts[i])
 		if c.hosts[i], err = finder.HostSystemList(ctx, StrAsterisk); err != nil {
 			return fmt.Errorf("Could not get datacenter node list: %w", err)
+		}
+
+		// keep hostStates between intervals except if the number of dcs or hosts changed
+		platformChange = platformChange || numhosts != len(c.hosts[i])
+		if platformChange {
+			c.hostStates[i] = make([]hostState, len(c.hosts[i]))
 		}
 	}
 	c.lastCHUpdate = time.Now()
@@ -159,11 +178,67 @@ func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
 	return nil
 }
 
-func hostRInfoSliceContainsNotNil(slice []*types.HostRuntimeInfo) bool {
-	for _, v := range slice {
-		if v != nil {
-			return true
+func (c *VcCollector) IsHostConnected(dc *object.Datacenter, host *object.HostSystem) bool {
+	for i, searcdc := range c.dcs {
+		if searcdc == dc {
+			for j, searchost := range c.hosts[i] {
+				if searchost == host {
+					return !c.hostStates[i][j].notConnected
+				}
+			}
 		}
 	}
+
 	return false
+}
+
+func (c *VcCollector) isHostConnectedRespondingIdx(dcindex, hostindex int) bool {
+	var (
+		connectedResponding bool
+		hState              hostState
+	)
+
+	if len(c.hostStates) <= dcindex || len(c.hostStates[dcindex]) <= hostindex {
+		return true
+	}
+	if len(c.hosts) <= dcindex || len(c.hosts[dcindex]) <= hostindex {
+		return false
+	}
+	hState = c.hostStates[dcindex][hostindex]
+	if !hState.notConnected {
+		// limit notResponding in cache for skipNotRespondigFor
+		if time.Since(hState.lastNoResponse) > c.skipNotRespondigFor {
+			hState.notResponding = false
+		}
+		connectedResponding = !hState.notResponding
+	}
+
+	return connectedResponding
+}
+
+// GetNumberNotRespondingHosts returns the number of hosts connected but not responding
+// to esxcli commands
+func (c *VcCollector) GetNumberNotRespondingHosts() int {
+	var numnotresponding int
+
+	for i := range c.dcs {
+		for _, hState := range c.hostStates[i] {
+			if hState.notResponding {
+				numnotresponding++
+			}
+		}
+	}
+
+	return numnotresponding
+}
+
+func (c *hostState) setNotConnected(conn bool) {
+	c.notConnected = conn
+}
+
+func (c *hostState) setNotResponding(resp bool) {
+	c.notResponding = resp
+	if resp {
+		c.lastNoResponse = time.Now()
+	}
 }
