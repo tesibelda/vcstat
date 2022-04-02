@@ -26,8 +26,8 @@ func (c *VcCollector) CollectHostInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hosts                    []*object.HostSystem
 		hsMo                     mo.HostSystem
+		hostSt                   *hostState
 		err                      error
 		hsCode, hsConnectionCode int16
 	)
@@ -40,8 +40,11 @@ func (c *VcCollector) CollectHostInfo(
 	}
 
 	for i, dc := range c.dcs {
-		hosts = c.hosts[i]
-		for j, host := range hosts {
+		for j, host := range c.hosts[i] {
+			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
+				acc.AddError(fmt.Errorf("Could not find host state struc tfor %s", host.Name()))
+				continue
+			}
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
 				if err, exit := govQueryError(err); exit {
@@ -60,7 +63,7 @@ func (c *VcCollector) CollectHostInfo(
 				)
 				continue
 			}
-			c.hostStates[i][j].setNotConnected(
+			hostSt.setNotConnected(
 				hsMo.Summary.Runtime.ConnectionState != types.HostSystemConnectionStateConnected,
 			)
 			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
@@ -94,10 +97,11 @@ func (c *VcCollector) CollectHostHBA(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hosts []*object.HostSystem
-		x     *esxcli.Executor
-		res   *esxcli.Response
-		err   error
+		x         *esxcli.Executor
+		res       *esxcli.Response
+		hostSt    *hostState
+		startTime time.Time
+		err       error
 	)
 
 	if c.client == nil {
@@ -108,11 +112,15 @@ func (c *VcCollector) CollectHostHBA(
 	}
 
 	for i, dc := range c.dcs {
-		hosts = c.hosts[i]
-		for j, host := range hosts {
-			if !c.isHostConnectedRespondingIdx(i, j) {
+		for j, host := range c.hosts[i] {
+			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
+			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+				continue
+			}
+			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
 				acc.AddError(
 					fmt.Errorf(
@@ -124,6 +132,7 @@ func (c *VcCollector) CollectHostHBA(
 				continue
 			}
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
+			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
 				if err, exit := govQueryError(err); exit {
 					return err
@@ -135,7 +144,7 @@ func (c *VcCollector) CollectHostHBA(
 						err,
 					),
 				)
-				c.hostStates[i][j].setNotResponding(true)
+				hostSt.setNotResponding(true)
 				continue
 			}
 
@@ -174,10 +183,11 @@ func (c *VcCollector) CollectHostNIC(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hosts []*object.HostSystem
-		x     *esxcli.Executor
-		res   *esxcli.Response
-		err   error
+		x         *esxcli.Executor
+		res       *esxcli.Response
+		hostSt    *hostState
+		startTime time.Time
+		err       error
 	)
 
 	if c.client == nil {
@@ -188,22 +198,22 @@ func (c *VcCollector) CollectHostNIC(
 	}
 
 	for i, dc := range c.dcs {
-		hosts = c.hosts[i]
-		for j, host := range hosts {
-			if !c.isHostConnectedRespondingIdx(i, j) {
+		for j, host := range c.hosts[i] {
+			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
+			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+				continue
+			}
+			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(
-					fmt.Errorf(
-						"Could not get esxcli executor for host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
-			if res, err = x.Run([]string{"network", "nic", "list"}); err != nil {
+			res, err = x.Run([]string{"network", "nic", "list"})
+			hostSt.setMeanResponseTime(time.Since(startTime))
+			if err != nil {
 				if err, exit := govQueryError(err); exit {
 					return err
 				}
@@ -214,7 +224,7 @@ func (c *VcCollector) CollectHostNIC(
 						err,
 					),
 				)
-				c.hostStates[i][j].setNotResponding(true)
+				hostSt.setNotResponding(true)
 				continue
 			}
 
@@ -255,10 +265,11 @@ func (c *VcCollector) CollectHostFw(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hosts []*object.HostSystem
-		x     *esxcli.Executor
-		res   *esxcli.Response
-		err   error
+		x         *esxcli.Executor
+		res       *esxcli.Response
+		hostSt    *hostState
+		startTime time.Time
+		err       error
 	)
 
 	if c.client == nil {
@@ -269,11 +280,15 @@ func (c *VcCollector) CollectHostFw(
 	}
 
 	for i, dc := range c.dcs {
-		hosts = c.hosts[i]
-		for j, host := range hosts {
-			if !c.isHostConnectedRespondingIdx(i, j) {
+		for j, host := range c.hosts[i] {
+			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
+			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+				continue
+			}
+			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
 				acc.AddError(
 					fmt.Errorf(
@@ -284,7 +299,9 @@ func (c *VcCollector) CollectHostFw(
 				)
 				continue
 			}
-			if res, err = x.Run([]string{"network", "firewall", "get"}); err != nil {
+			res, err = x.Run([]string{"network", "firewall", "get"})
+			hostSt.setMeanResponseTime(time.Since(startTime))
+			if err != nil {
 				if err, exit := govQueryError(err); exit {
 					return err
 				}
@@ -295,7 +312,7 @@ func (c *VcCollector) CollectHostFw(
 						err,
 					),
 				)
-				c.hostStates[i][j].setNotResponding(true)
+				hostSt.setNotResponding(true)
 				continue
 			}
 
@@ -335,6 +352,53 @@ func (c *VcCollector) CollectHostFw(
 				)
 				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, time.Now())
 			}
+		}
+	}
+
+	return nil
+}
+
+// ReportHostEsxcliResponse reports metrics about host esxcli command responses
+func (c *VcCollector) ReportHostEsxcliResponse(
+	ctx context.Context,
+	acc telegraf.Accumulator,
+) error {
+	var (
+		hostSt          *hostState
+		responding_code int
+	)
+
+	if c.client == nil {
+		return fmt.Errorf(string(Error_NoClient))
+	}
+
+	for i, dc := range c.dcs {
+		for j, host := range c.hosts[i] {
+			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				continue
+			}
+			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+				continue
+			}
+
+			hstags := getHostTags(
+				c.client.Client.URL().Host,
+				dc.Name(),
+				c.getClusterFromHost(i, host),
+				host.Name(),
+				host.Reference().Value,
+			)
+			responding_code = 0
+			if time.Since(hostSt.lastNoResponse) < c.dataDuration {
+				responding_code = 2
+			}
+			hsfields := getEsxcliFields(
+				responding_code,
+				int(hostSt.responseTime.Nanoseconds()),
+			)
+
+			acc.AddFields("vcstat_host_esxcli", hsfields, hstags, time.Now())
 		}
 	}
 
@@ -410,6 +474,23 @@ func getHbaFields(status string, statuscode int16) map[string]interface{} {
 	}
 }
 
+// hbaLinkStateCode converts storage adapter Link State to int16
+// for easy alerting from telegraf metrics
+func hbaLinkStateCode(state string) int16 {
+	switch state {
+	case "link-up", "online":
+		return 0
+	case "link-n/a":
+		return 1
+	case "unbound":
+		return 1
+	case "link-down", "offline":
+		return 3
+	default:
+		return 1
+	}
+}
+
 func getNicTags(vcenter, dcname, cluster, hostname, nic, driver string) map[string]string {
 	return map[string]string{
 		"clustername": cluster,
@@ -433,23 +514,6 @@ func getNicFields(
 		"duplex":           duplex,
 		"mac":              mac,
 		"speed":            speed,
-	}
-}
-
-// hbaLinkStateCode converts storage adapter Link State to int16
-// for easy alerting from telegraf metrics
-func hbaLinkStateCode(state string) int16 {
-	switch state {
-	case "link-up", "online":
-		return 0
-	case "link-n/a":
-		return 1
-	case "unbound":
-		return 1
-	case "link-down", "offline":
-		return 3
-	default:
-		return 1
 	}
 }
 
@@ -482,5 +546,12 @@ func getFirewallFields(defaultaction string, enabled, loaded bool) map[string]in
 		"defaultaction": defaultaction,
 		"enabled":       enabled,
 		"loaded":        loaded,
+	}
+}
+
+func getEsxcliFields(responding_code, response_time int) map[string]interface{} {
+	return map[string]interface{}{
+		"responding_code":  responding_code,
+		"response_time_ns": response_time,
 	}
 }

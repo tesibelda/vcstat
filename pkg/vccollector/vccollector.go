@@ -73,14 +73,14 @@ func NewVCCollector(
 	return &vcc, err
 }
 
-// Set max cache data duration
+// SetDataDuration sets max cache data duration
 func (c *VcCollector) SetDataDuration(du time.Duration) error {
 	c.dataDuration = du
 	return nil
 }
 
-// Set duration to skip not responding to esxcli commands hosts
-func (c *VcCollector) SetSkipNotRespondingDuration(du time.Duration) error {
+// SetSkipHostNotRespondingDuration sets time to skip not responding to esxcli commands hosts
+func (c *VcCollector) SetSkipHostNotRespondingDuration(du time.Duration) error {
 	c.skipNotRespondigFor = du
 	return nil
 }
@@ -172,7 +172,7 @@ func (c *VcCollector) newCAClient(ctx context.Context) (*govmomi.Client, error) 
 	return cli, err
 }
 
-// entityStatusCode converts types.ManagedEntityStatus to int16 for easy alerting from telegraf metrics
+// entityStatusCode converts types.ManagedEntityStatus to int16 for easy alerting
 func entityStatusCode(status types.ManagedEntityStatus) int16 {
 	switch status {
 	case types.ManagedEntityStatusGray:
@@ -188,9 +188,9 @@ func entityStatusCode(status types.ManagedEntityStatus) int16 {
 	}
 }
 
-// govQueryError returns false if error is light and we may continue quering or not
+// govQueryError returns false if error is light and we may continue quering
 func govQueryError(err error) (error, bool) {
-	if err == context.Canceled {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return err, true
 	}
 

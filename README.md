@@ -21,8 +21,8 @@ Use telegraf v1.14 or above so that execd input is available.
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
-  ## number of intervals to skip not responding to esxcli commands hosts
-  # intervals_skip_notresponding_hosts = 30
+  ## number of intervals to skip esxcli commands for not responding hosts
+  # intervals_skip_notresponding_esxcli_hosts = 20
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"
@@ -56,6 +56,7 @@ Use telegraf v1.14 or above so that execd input is available.
   command = ["/path/to/vcstat_binary", "-config", "/path/to/vcstat.conf"]
   signal = "none"
 ```
+You can optionally tell vcstat the input's interval by adding -poll_interval <interval> parameters
 
 * Restart or reload Telegraf.
 
@@ -70,6 +71,8 @@ Use telegraf v1.14 or above so that execd input is available.
 
 * Wait for 1 minute or press enter. You should see lines like those in the Example output below.
 
+* Note that vcstat will escape querying disconnected hosts and also skip esxcli commands to not responsive hosts for intervals_skip_notresponding_esxcli_hosts intervals
+
 # Example output
 
 ```plain
@@ -80,10 +83,11 @@ vcstat_host,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,moid
 vcstat_host_firewall,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,vcenter=vcenter.local defaultaction="DROP",enabled=true,loaded=true 1639585701216566800
 vcstat_host_hba,dcname=MyDC,clustername=MyCluster-01,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local,vcenter=vcenter.local status="link-n/a",status_code=1i 1639585701216566800
 vcstat_host_nic,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1639585702275580100
+vcstat_host_esxcli,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local responding_code=0i,response_time_ns=109185876i 1639585702275580100
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1639585702303440200
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1639585702303440200
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommited=20511i,maintenance_mode="normal" 1639585702303440200
-internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i,notresponding_hosts=0i 1639585702303440300
+internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i,notresponding_esxcli_hosts=0i 1639585702303440300
 ```
 
 # Metrics

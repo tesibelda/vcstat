@@ -26,7 +26,7 @@ type VCstatConfig struct {
 	Username            string `toml:"username"`
 	Password            string `toml:"password"`
 	Timeout             config.Duration
-	IntSkipNotRespondig int16           `toml:"intervals_skip_notresponding_hosts"`
+	IntSkipNotRespondig int16           `toml:"intervals_skip_notresponding_esxcli_hosts"`
 	Log                 telegraf.Logger `toml:"-"`
 
 	ClusterInstances   bool `toml:"cluster_instances"`
@@ -55,8 +55,8 @@ var sampleConfig = `
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
-  ## number of intervals to skip not responding hosts to esxcli commands
-  # intervals_skip_notresponding_hosts = 30
+  ## number of intervals to skip esxcli commands for not responding hosts
+  # intervals_skip_notresponding_esxcli_hosts = 20
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"
@@ -90,7 +90,7 @@ func init() {
 			Username:            "user@corp.local",
 			Password:            "secret",
 			Timeout:             config.Duration(time.Second * 0),
-			IntSkipNotRespondig: 30,
+			IntSkipNotRespondig: 20,
 			ClusterInstances:    true,
 			DatastoreInstances:  false,
 			HostInstances:       true,
@@ -127,7 +127,7 @@ func (vcs *VCstatConfig) Init() error {
 	// Set vccollector dataduration as half of the telegraf shim polling interval
 	_ = vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
 	// Set vccollector duration to skip not responding hosts to esxcli commands
-	_ = vcs.vcc.SetSkipNotRespondingDuration(
+	_ = vcs.vcc.SetSkipHostNotRespondingDuration(
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
 	)
 
@@ -140,7 +140,7 @@ func (vcs *VCstatConfig) Init() error {
 		"vcenter": u.Hostname(),
 	}
 	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)
-	vcs.NotRespondingHosts = selfstat.Register("vcstat", "notresponding_hosts", tags)
+	vcs.NotRespondingHosts = selfstat.Register("vcstat", "notresponding_esxcli_hosts", tags)
 	vcs.SessionsCreated = selfstat.Register("vcstat", "sessions_created", tags)
 
 	return err
@@ -279,6 +279,12 @@ func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulato
 
 	if vcs.HostFwInstances {
 		if err = col.CollectHostFw(ctx, acc); err != nil {
+			return err
+		}
+	}
+
+	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
+		if err = col.ReportHostEsxcliResponse(ctx, acc); err != nil {
 			return err
 		}
 	}

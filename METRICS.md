@@ -61,7 +61,17 @@
 	- reboot_required (int)
 	- in_maintenance_mode (int)
 	- connection_state (int)
-	- connection_state_code (int)
+	- connection_state_code (int) 0-connected, 1-notresponding, 2-disconnected
+- vcstat_host_esxcli
+  - tags:
+    - esxhostname
+	- moid
+    - vcenter
+    - dcname
+    - clustername
+  - fields:
+	- responding_code (int) 0-responding, 1-skipping, 2-notresponding
+	- response_time_ns (int)
 - vcstat_host_firewall
   - tags:
     - esxhostname
@@ -81,8 +91,8 @@
     - dcname
     - clustername
   - fields:
-	- link_state (string) 0-link-up, 1-link-n/a, 2-unbound, 3-link-down
-	- link_state_code (int)
+	- link_state (string)
+	- link_state_code (int) 0-link-up, 1-link-n/a, 2-unbound, 3-link-down
 - vcstat_host_nic
   - tags:
 	- device
@@ -127,4 +137,4 @@
   - fields:
     - sessions_created (int)
     - gather_time_ns (int)
-	- notresponding_hosts (int)
+	- notresponding_esxcli_hosts (int)

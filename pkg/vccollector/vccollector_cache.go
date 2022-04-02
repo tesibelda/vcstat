@@ -24,6 +24,7 @@ type hostState struct {
 	notConnected   bool
 	lastNoResponse time.Time
 	notResponding  bool
+	responseTime   time.Duration
 }
 
 type VcCache struct {
@@ -192,28 +193,14 @@ func (c *VcCollector) IsHostConnected(dc *object.Datacenter, host *object.HostSy
 	return false
 }
 
-func (c *VcCollector) isHostConnectedRespondingIdx(dcindex, hostindex int) bool {
-	var (
-		connectedResponding bool
-		hState              hostState
-	)
-
+func (c *VcCollector) getHostStateIdx(dcindex, hostindex int) *hostState {
 	if len(c.hostStates) <= dcindex || len(c.hostStates[dcindex]) <= hostindex {
-		return true
+		return nil
 	}
 	if len(c.hosts) <= dcindex || len(c.hosts[dcindex]) <= hostindex {
-		return false
+		return nil
 	}
-	hState = c.hostStates[dcindex][hostindex]
-	if !hState.notConnected {
-		// limit notResponding in cache for skipNotRespondigFor
-		if time.Since(hState.lastNoResponse) > c.skipNotRespondigFor {
-			hState.notResponding = false
-		}
-		connectedResponding = !hState.notResponding
-	}
-
-	return connectedResponding
+	return &(c.hostStates[dcindex][hostindex])
 }
 
 // GetNumberNotRespondingHosts returns the number of hosts connected but not responding
@@ -241,4 +228,26 @@ func (c *hostState) setNotResponding(resp bool) {
 	if resp {
 		c.lastNoResponse = time.Now()
 	}
+}
+
+func (c *hostState) setMeanResponseTime(dur time.Duration) {
+	if c.responseTime == 0 {
+		c.responseTime = dur
+	} else {
+		c.responseTime = (c.responseTime + dur) / 2
+	}
+}
+
+func (c *hostState) isHostConnectedAndResponding(skipDuration time.Duration) bool {
+	var connectedResponding bool
+
+	if !c.notConnected {
+		// limit notResponding in cache for skipDuration
+		if time.Since(c.lastNoResponse) > skipDuration {
+			c.notResponding = false
+		}
+		connectedResponding = !c.notResponding
+	}
+
+	return connectedResponding
 }
