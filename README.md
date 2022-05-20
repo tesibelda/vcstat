@@ -1,6 +1,6 @@
 # Telegraf execd vcstat input
 
-vcstat is a VMware vSphere input plugin for [Telegraf](https://github.com/influxdata/telegraf) that gathers status and basic stats from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down or to know the number of ports used by a Distributed Virtual Switch.
+vcstat is a VMware vSphere input plugin for [Telegraf](https://github.com/influxdata/telegraf) that gathers status and basic [stats](https://github.com/tesibelda/vcstat/blob/master/METRICS.md) from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down or to know the number of ports used by a Distributed Virtual Switch.
 
 # Compatibility
 
@@ -65,6 +65,7 @@ You can optionally tell vcstat the input's interval by adding -poll_interval the
   command = ["/path/to/vcstat_binary", "-config", "/path/to/vcstat.conf", "-poll_interval", "30s"]
   signal = "none"
 ```
+Metric timestamp precision will be set according to the polling interval, so it will usually be 1s.
 
 * Restart or reload Telegraf.
 

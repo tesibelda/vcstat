@@ -200,6 +200,7 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 		}
 		vcs.SessionsCreated.Incr(1)
 	}
+	acc.SetPrecision(getPrecision(vcs.pollInterval))
 	// poll using a context with timeout
 	ctx1, cancel1 := context.WithTimeout(vcs.ctx, time.Duration(vcs.Timeout))
 	defer cancel1()
@@ -323,4 +324,18 @@ func gatherError(acc telegraf.Accumulator, err error) error {
 	}
 	acc.AddError(err)
 	return nil
+}
+
+// Returns the rounding precision for metrics
+func getPrecision(interval time.Duration) time.Duration {
+	switch {
+	case interval >= time.Second:
+		return time.Second
+	case interval >= time.Millisecond:
+		return time.Millisecond
+	case interval >= time.Microsecond:
+		return time.Microsecond
+	default:
+		return time.Nanosecond
+	}
 }
