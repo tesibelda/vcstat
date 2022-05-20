@@ -378,9 +378,6 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
-			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
-				continue
-			}
 
 			hstags := getHostTags(
 				c.client.Client.URL().Host,
@@ -390,8 +387,12 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 				host.Reference().Value,
 			)
 			responding_code = 0
-			if time.Since(hostSt.lastNoResponse) < c.dataDuration {
-				responding_code = 2
+			if !hostSt.isHostConnected() {
+				responding_code = 1
+			} else {
+				if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+					responding_code = 2
+				}
 			}
 			hsfields := getEsxcliFields(
 				responding_code,

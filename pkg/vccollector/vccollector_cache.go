@@ -251,3 +251,7 @@ func (c *hostState) isHostConnectedAndResponding(skipDuration time.Duration) boo
 
 	return connectedResponding
 }
+
+func (c *hostState) isHostConnected() bool {
+	return !c.notConnected
+}
