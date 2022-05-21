@@ -179,15 +179,60 @@ func (vcs *VCstatConfig) Description() string {
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	var (
-		col       *vccollector.VcCollector
 		startTime time.Time
 		err       error
 	)
 
-	//--- re-Init if needed
+	if err = vcs.keepActiveSession(acc); err != nil {
+		return gatherError(acc, err)
+	}
+	acc.SetPrecision(getPrecision(vcs.pollInterval))
+
+	// poll using a context with timeout
+	ctx1, cancel1 := context.WithTimeout(vcs.ctx, time.Duration(vcs.Timeout))
+	defer cancel1()
+	startTime = time.Now()
+
+
+	//--- Get vCenter, DCs and Clusters info
+	if err = vcs.gatherHighLevelEntities(ctx1, acc); err != nil {
+		return gatherError(acc, err)
+	}
+
+	//--- Get Hosts, Networks and Storage info
+	if err = vcs.gatherHost(ctx1, acc); err != nil {
+		return gatherError(acc, err)
+	}
+	if err = vcs.gatherNetwork(ctx1, acc); err != nil {
+		return gatherError(acc, err)
+	}
+	if err = vcs.gatherStorage(ctx1, acc); err != nil {
+		return gatherError(acc, err)
+	}
+
+
+	// selfmonitoring
+	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
+	vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
+	for _, m := range selfstat.Metrics() {
+		if m.Name() != "internal_agent" {
+			acc.AddMetric(m)
+		}
+	}
+
+	return nil
+}
+
+// keepActiveSession keeps an active session with vsphere
+func (vcs *VCstatConfig) keepActiveSession(acc telegraf.Accumulator) error {
+	var (
+		col *vccollector.VcCollector
+		err error
+	)
+
 	if vcs.ctx == nil || vcs.ctx.Err() != nil || vcs.vcc == nil {
 		if err = vcs.Init(); err != nil {
-			return gatherError(acc, err)
+			return err
 		}
 	}
 	col = vcs.vcc
@@ -196,56 +241,39 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("vCenter session not active, re-authenticating..."))
 		}
 		if err = col.Open(vcs.ctx, time.Duration(vcs.Timeout)); err != nil {
-			return gatherError(acc, err)
+			return err
 		}
 		vcs.SessionsCreated.Incr(1)
 	}
-	acc.SetPrecision(getPrecision(vcs.pollInterval))
-	// poll using a context with timeout
-	ctx1, cancel1 := context.WithTimeout(vcs.ctx, time.Duration(vcs.Timeout))
-	defer cancel1()
-	startTime = time.Now()
+
+	return nil
+}
+
+// gatherHighLevelEntities gathers datacenters and clusters stats
+func (vcs *VCstatConfig) gatherHighLevelEntities(ctx context.Context, acc telegraf.Accumulator) error {
+	var (
+		col *vccollector.VcCollector
+		err error
+	)
+
+	col = vcs.vcc
 
 	//--- Get vCenter basic stats
-	if err = col.CollectVcenterInfo(ctx1, acc); err != nil {
-		return gatherError(acc, err)
+	if err = col.CollectVcenterInfo(ctx, acc); err != nil {
+		return err
 	}
 
 	//--- Get Datacenters info
 	if vcs.ClusterInstances || vcs.HostInstances {
-		if err = col.CollectDatacenterInfo(ctx1, acc); err != nil {
-			return gatherError(acc, err)
+		if err = col.CollectDatacenterInfo(ctx, acc); err != nil {
+			return err
 		}
 	}
 
 	//--- Get Clusters info
 	if vcs.ClusterInstances {
-		if err = col.CollectClusterInfo(ctx1, acc); err != nil {
-			return gatherError(acc, err)
-		}
-	}
-
-	//--- Get Hosts, Network,... info
-	if err = vcs.gatherHost(ctx1, acc); err != nil {
-		return gatherError(acc, err)
-	}
-	if err = vcs.gatherNetwork(ctx1, acc); err != nil {
-		return gatherError(acc, err)
-	}
-
-	//--- Get Datastores info
-	if vcs.DatastoreInstances {
-		if err = col.CollectDatastoresInfo(ctx1, acc); err != nil {
-			return gatherError(acc, err)
-		}
-	}
-
-	// selfmonitoring
-	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
-	vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
-	for _, m := range selfstat.Metrics() {
-		if m.Name() != "internal_agent" {
-			acc.AddMetric(m)
+		if err = col.CollectClusterInfo(ctx, acc); err != nil {
+			return err
 		}
 	}
 
@@ -310,6 +338,23 @@ func (vcs *VCstatConfig) gatherNetwork(ctx context.Context, acc telegraf.Accumul
 	if vcs.NetDVPInstances {
 		if err = col.CollectNetDVP(ctx, acc); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// gatherStorage gathers storage entities info
+func (vcs *VCstatConfig) gatherStorage(ctx context.Context, acc telegraf.Accumulator) error {
+	var (
+		col *vccollector.VcCollector
+		err error
+	)
+
+	col = vcs.vcc
+	if vcs.DatastoreInstances {
+		if err = col.CollectDatastoresInfo(ctx, acc); err != nil {
+			return gatherError(acc, err)
 		}
 	}
 
