@@ -83,12 +83,12 @@ func getDsTags(vcenter, dcname, dsname, moid, dstype string) map[string]string {
 	}
 }
 
-func getDsFields(accessible bool, capacity, freespace, uncommited int64, maintenance string) map[string]interface{} {
+func getDsFields(accessible bool, capacity, freespace, uncommitted int64, maintenance string) map[string]interface{} {
 	return map[string]interface{}{
 		"accessible":       accessible,
 		"capacity":         capacity,
 		"freespace":        freespace,
 		"maintenance_mode": maintenance,
-		"uncommited":       uncommited,
+		"uncommitted":      uncommitted,
 	}
 }

@@ -46,7 +46,7 @@
 	- accessible (bool)
 	- capacity (int)
 	- freespace (int)
-	- uncommited (int)
+	- uncommitted (int)
 	- maintenance_mode (string)
 - vcstat_host
   - tags:
