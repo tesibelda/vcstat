@@ -1,4 +1,5 @@
-// vcstat package is a telegraf execd input plugin that gathers vCenter status and basic stats
+// vcstat is a VMware vSphere input plugin for Telegraf that gathers status and basic
+//  stats from vCenter
 //
 // Author: Tesifonte Belda
 // License: The MIT License (MIT)
@@ -172,7 +173,7 @@ func (vcs *VCstatConfig) SampleConfig() string {
 
 // Description returns a short textual description of the plugin
 func (vcs *VCstatConfig) Description() string {
-	return "Gathers vSphere vCenter status and basic stats"
+	return "Gathers status and basic stats from VMware vCenter"
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
@@ -189,27 +190,25 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	acc.SetPrecision(getPrecision(vcs.pollInterval))
 
 	// poll using a context with timeout
-	ctx1, cancel1 := context.WithTimeout(vcs.ctx, time.Duration(vcs.Timeout))
-	defer cancel1()
+	ctxT, cancelT := context.WithTimeout(vcs.ctx, time.Duration(vcs.Timeout))
+	defer cancelT()
 	startTime = time.Now()
 
-
 	//--- Get vCenter, DCs and Clusters info
-	if err = vcs.gatherHighLevelEntities(ctx1, acc); err != nil {
+	if err = vcs.gatherHighLevelEntities(ctxT, acc); err != nil {
 		return gatherError(acc, err)
 	}
 
 	//--- Get Hosts, Networks and Storage info
-	if err = vcs.gatherHost(ctx1, acc); err != nil {
+	if err = vcs.gatherHost(ctxT, acc); err != nil {
 		return gatherError(acc, err)
 	}
-	if err = vcs.gatherNetwork(ctx1, acc); err != nil {
+	if err = vcs.gatherNetwork(ctxT, acc); err != nil {
 		return gatherError(acc, err)
 	}
-	if err = vcs.gatherStorage(ctx1, acc); err != nil {
+	if err = vcs.gatherStorage(ctxT, acc); err != nil {
 		return gatherError(acc, err)
 	}
-
 
 	// selfmonitoring
 	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
@@ -371,7 +370,7 @@ func gatherError(acc telegraf.Accumulator, err error) error {
 	return nil
 }
 
-// Returns the rounding precision for metrics
+// getPrecision returns the rounding precision for metrics
 func getPrecision(interval time.Duration) time.Duration {
 	switch {
 	case interval >= time.Second:

@@ -23,7 +23,7 @@ tasks:
     desc: Downloads and tidy Go modules
     cmds:
       - go mod download
-      - go mod tidy -compat=1.17
+      - go mod tidy
 
   lint:
     desc: Runs golint
