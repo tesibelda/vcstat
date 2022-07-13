@@ -123,23 +123,17 @@ func (c *VcCollector) Open(ctx context.Context, timeout time.Duration) error {
 	return err
 }
 
-// IsOpen returns if the vCenter connection is active or not
+// IsActive returns if the vCenter connection is active or not
 func (c *VcCollector) IsActive(ctx context.Context) bool {
-	var ok bool
-
-	if c.client != nil {
-		var err error
-		if ok, err = c.client.SessionManager.SessionIsActive(ctx); err != nil {
-			// skip permission denied error for SessionIsActive call
-			if strings.Contains(err.Error(), "Permission") {
-				return true
-			} else {
-				return false
-			}
-		}
+	if c == nil || !c.client.Valid() {
+		return false
 	}
 
-	return ok
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(5 * time.Second))
+	defer cancel1()
+	_, err := methods.GetCurrentTime(ctx1, c.client) //nolint no need current time
+
+	return err == nil
 }
 
 // Close closes vCenter connection
