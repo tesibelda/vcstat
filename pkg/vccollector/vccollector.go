@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -23,6 +22,7 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -125,7 +125,7 @@ func (c *VcCollector) Open(ctx context.Context, timeout time.Duration) error {
 
 // IsActive returns if the vCenter connection is active or not
 func (c *VcCollector) IsActive(ctx context.Context) bool {
-	if c == nil || !c.client.Valid() {
+	if c == nil  || c.client == nil || !c.client.Valid() {
 		return false
 	}
 

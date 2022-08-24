@@ -63,11 +63,14 @@ func (c *VcCollector) CollectHostInfo(
 				)
 				continue
 			}
+			s := hsMo.Summary
+			r := s.Runtime
+			h := s.Hardware
 			hostSt.setNotConnected(
-				hsMo.Summary.Runtime.ConnectionState != types.HostSystemConnectionStateConnected,
+				r.ConnectionState != types.HostSystemConnectionStateConnected,
 			)
-			hsCode = entityStatusCode(hsMo.Summary.OverallStatus)
-			hsConnectionCode = hostConnectionStateCode(hsMo.Summary.Runtime.ConnectionState)
+			hsCode = entityStatusCode(s.OverallStatus)
+			hsConnectionCode = hostConnectionStateCode(r.ConnectionState)
 
 			hstags := getHostTags(
 				c.client.Client.URL().Host,
@@ -77,12 +80,15 @@ func (c *VcCollector) CollectHostInfo(
 				host.Reference().Value,
 			)
 			hsfields := getHostFields(
-				string(hsMo.Summary.OverallStatus),
+				string(s.OverallStatus),
 				hsCode,
-				hsMo.Summary.RebootRequired,
-				hsMo.Summary.Runtime.InMaintenanceMode,
-				string(hsMo.Summary.Runtime.ConnectionState),
+				s.RebootRequired,
+				r.InMaintenanceMode,
+				string(r.ConnectionState),
 				hsConnectionCode,
+				h.MemorySize,
+				h.NumCpuCores,
+				h.CpuMhz,
 			)
 			acc.AddFields("vcstat_host", hsfields, hstags, time.Now())
 		}
@@ -446,6 +452,9 @@ func getHostFields(
 	rebootrequired, inmaintenancemode bool,
 	connectionstate string,
 	connectionstatecode int16,
+	memorysize int64,
+	numcpu int16,
+	cpumhz int32,
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"connection_state":      connectionstate,
@@ -454,6 +463,9 @@ func getHostFields(
 		"reboot_required":       rebootrequired,
 		"status":                overallstatus,
 		"status_code":           hoststatuscode,
+		"memory_size":           memorysize,
+		"num_cpus":              numcpu,
+		"cpu_freq":              cpumhz,
 	}
 }
 

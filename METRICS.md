@@ -32,9 +32,9 @@
 	- num_cpu_cores (int)
 	- num_cpu_threads (int)
 	- total_cpu (int)
-	- total_memory (int)
+	- total_memory (int) in bytes
 	- effective_cpu (int)
-	- effective_memory (int)
+	- effective_memory (int) in bytes
 - vcstat_datastore
   - tags:
     - dsname
@@ -44,8 +44,8 @@
     - dcname
   - fields:
 	- accessible (bool)
-	- capacity (int)
-	- freespace (int)
+	- capacity (int) in bytes
+	- freespace (int) in bytes
 	- uncommitted (int)
 	- maintenance_mode (string)
 - vcstat_host
@@ -62,6 +62,9 @@
 	- in_maintenance_mode (int)
 	- connection_state (int)
 	- connection_state_code (int) 0-connected, 1-notresponding, 2-disconnected
+	- memory_size (int) in bytes
+	- num_cpus (int)
+	- cpu_freq (int)
 - vcstat_host_esxcli
   - tags:
     - esxhostname
