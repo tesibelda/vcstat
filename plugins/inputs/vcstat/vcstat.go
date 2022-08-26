@@ -38,6 +38,7 @@ type VCstatConfig struct {
 	HostFwInstances    bool `toml:"host_firewall_instances"`
 	NetDVSInstances    bool `toml:"net_dvs_instances"`
 	NetDVPInstances    bool `toml:"net_dvp_instances"`
+	VMInstances        bool `toml:"vm_instances"`
 
 	pollInterval time.Duration
 	ctx          context.Context
@@ -65,22 +66,24 @@ var sampleConfig = `
   # insecure_skip_verify = false
 
   #### you may enable or disable data collection per instance type ####
-  ## collect cluster measurements (vcstat_cluster)
+  ## collect cluster measurement (vcstat_cluster)
   # cluster_instances = true
   ## collect datastore measurement (vcstat_datastore)
   # datastore_instances = false
-  ## collect host status measurements (vcstat_host)
+  ## collect host status measurement (vcstat_host)
   # host_instances = true
   ## collect host firewall measurement (vcstat_host_firewall)
   # host_firewall_instances = false
-  ## collect host bus adapter measurements (vcstat_host_hba)
+  ## collect host bus adapter measurement (vcstat_host_hba)
   # host_hba_instances = false
-  ## collect host network interface measurements (vcstat_host_nic)
+  ## collect host network interface measurement (vcstat_host_nic)
   # host_nic_instances = false
-  ## collect network distributed virtual switch measurements (vcstat_net_dvs)
+  ## collect network distributed virtual switch measurement (vcstat_net_dvs)
   # net_dvs_instances = true
-  ## collect network distributed virtual portgroup measurements (vcstat_net_dvp)
+  ## collect network distributed virtual portgroup measurement (vcstat_net_dvp)
   # net_dvp_instances = false
+  ## collect virtual machine measurement (vcstat_vm)
+  # vm_instances = false
 `
 
 func init() {
@@ -100,6 +103,7 @@ func init() {
 			HostNICInstances:    false,
 			NetDVSInstances:     true,
 			NetDVPInstances:     false,
+			VMInstances:         false,
 			pollInterval:        m,
 		}
 	})
@@ -207,6 +211,11 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 		return gatherError(acc, err)
 	}
 	if err = vcs.gatherStorage(ctxT, acc); err != nil {
+		return gatherError(acc, err)
+	}
+
+	//--- Get VM info
+	if err = vcs.gatherVM(ctxT, acc); err != nil {
 		return gatherError(acc, err)
 	}
 
@@ -345,14 +354,31 @@ func (vcs *VCstatConfig) gatherNetwork(ctx context.Context, acc telegraf.Accumul
 
 // gatherStorage gathers storage entities info
 func (vcs *VCstatConfig) gatherStorage(ctx context.Context, acc telegraf.Accumulator) error {
-	var (
-		col *vccollector.VcCollector
-		err error
-	)
-
-	col = vcs.vcc
 	if vcs.DatastoreInstances {
+		var col *vccollector.VcCollector
+		var err error
+		col = vcs.vcc		
+		if col == nil {
+			return nil
+		}
 		if err = col.CollectDatastoresInfo(ctx, acc); err != nil {
+			return gatherError(acc, err)
+		}
+	}
+
+	return nil
+}
+
+// gatherVM gathers virtual machines info
+func (vcs *VCstatConfig) gatherVM(ctx context.Context, acc telegraf.Accumulator) error {
+	if vcs.VMInstances {
+		var col *vccollector.VcCollector
+		var err error
+		col = vcs.vcc		
+		if col == nil {
+			return nil
+		}
+		if err = col.CollectVmsInfo(ctx, acc); err != nil {
 			return gatherError(acc, err)
 		}
 	}

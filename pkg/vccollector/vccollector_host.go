@@ -75,7 +75,7 @@ func (c *VcCollector) CollectHostInfo(
 			hstags := getHostTags(
 				c.client.Client.URL().Host,
 				dc.Name(),
-				c.getClusterFromHost(i, host),
+				c.getClusternameFromHost(i, host),
 				host.Name(),
 				host.Reference().Value,
 			)
@@ -164,7 +164,7 @@ func (c *VcCollector) CollectHostHBA(
 						hbatags := getHbaTags(
 							c.client.Client.URL().Host,
 							dc.Name(),
-							c.getClusterFromHost(i, host),
+							c.getClusternameFromHost(i, host),
 							host.Name(),
 							rv["HBAName"][0],
 							rv["Driver"][0],
@@ -244,7 +244,7 @@ func (c *VcCollector) CollectHostNIC(
 						nictags := getNicTags(
 							c.client.Client.URL().Host,
 							dc.Name(),
-							c.getClusterFromHost(i, host),
+							c.getClusternameFromHost(i, host),
 							host.Name(),
 							rv["Name"][0],
 							rv["Driver"][0],
@@ -326,7 +326,7 @@ func (c *VcCollector) CollectHostFw(
 				fwtags := getFirewallTags(
 					c.client.Client.URL().Host,
 					dc.Name(),
-					c.getClusterFromHost(i, host),
+					c.getClusternameFromHost(i, host),
 					host.Name(),
 				)
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
@@ -388,7 +388,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 			hstags := getHostTags(
 				c.client.Client.URL().Host,
 				dc.Name(),
-				c.getClusterFromHost(i, host),
+				c.getClusternameFromHost(i, host),
 				host.Name(),
 				host.Reference().Value,
 			)
@@ -412,7 +412,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 	return nil
 }
 
-func (c *VcCollector) getClusterFromHost(dcindex int, host *object.HostSystem) string {
+func (c *VcCollector) getClusternameFromHost(dcindex int, host *object.HostSystem) string {
 	for _, cluster := range c.clusters[dcindex] {
 		if strings.HasPrefix(host.InventoryPath, cluster.InventoryPath+"/") {
 			return cluster.Name()
@@ -422,7 +422,21 @@ func (c *VcCollector) getClusterFromHost(dcindex int, host *object.HostSystem) s
 	return ""
 }
 
-// hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting from telegraf metrics
+func (c *VcCollector) getHostObjectFromReference(
+	dcindex int,
+	r *types.ManagedObjectReference,
+) *object.HostSystem {
+	for _, host := range c.hosts[dcindex] {
+		if host.Reference().Type == r.Type && host.Reference().Value == r.Value {
+			return host
+		}
+	}
+
+	return nil
+}
+
+// hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy
+//  alerting from telegraf metrics
 func hostConnectionStateCode(state types.HostSystemConnectionState) int16 {
 	switch state {
 	case types.HostSystemConnectionStateConnected:

@@ -64,7 +64,7 @@
 	- connection_state_code (int) 0-connected, 1-notresponding, 2-disconnected
 	- memory_size (int) in bytes
 	- num_cpus (int)
-	- cpu_freq (int)
+	- cpu_freq (int) in MHz
 - vcstat_host_esxcli
   - tags:
     - esxhostname
@@ -134,6 +134,26 @@
     - status (string)
     - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
     - num_ports (int)
+- vcstat_vm
+  - tags:
+    - esxhostname
+	- moid
+    - vcenter
+    - dcname
+    - clustername
+	- vmname
+  - fields:
+	- status (string)
+	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
+	- consolidation_needed (bool)
+	- memory_size (int) in bytes
+	- memory_overhead (int) in bytes
+	- num_eth_cards (int)
+	- num_vdisks (int)
+	- num_vcpus (int)
+	- power_state (string)
+	- power_state_code (int) 0-on, 1-suspended, 2-off, 3-other
+	- template (bool)
 - internal_vcstat
   - tags:
     - vcenter

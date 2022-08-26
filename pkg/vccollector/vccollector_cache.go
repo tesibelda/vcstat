@@ -32,12 +32,14 @@ type VcCache struct {
 	lastCHUpdate time.Time                          //nolint
 	lastDsUpdate time.Time                          //nolint
 	lastNtUpdate time.Time                          //nolint
+	lastVmUpdate time.Time                          //nolint
 	dcs          []*object.Datacenter               //nolint
 	clusters     [][]*object.ClusterComputeResource //nolint
 	dss          [][]*object.Datastore              //nolint
 	hosts        [][]*object.HostSystem             //nolint
 	hostStates   [][]hostState                      //nolint
 	nets         [][]object.NetworkReference        //nolint
+	vms          [][]*object.VirtualMachine         //nolint
 }
 
 func (c *VcCollector) getDatacenters(ctx context.Context) error {
@@ -175,6 +177,39 @@ func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
 		}
 	}
 	c.lastDsUpdate = time.Now()
+
+	return nil
+}
+
+func (c *VcCollector) getAllDatacentersVMs(ctx context.Context) error {
+	if time.Since(c.lastVmUpdate) < c.dataDuration {
+		return nil
+	}
+	err := c.getAllDatacentersClustersAndHosts(ctx)
+	if err != nil {
+		return err
+	}
+
+	numdcs := len(c.dcs)
+	if numdcs != len(c.vms) {
+		if numdcs > 0 {
+			c.vms = make([][]*object.VirtualMachine, numdcs)
+		} else {
+			c.vms = nil
+		}
+	}
+
+	for i, dc := range c.dcs {
+		finder := find.NewFinder(c.client.Client, false)
+		finder.SetDatacenter(dc)
+
+		if c.vms[i], err = finder.VirtualMachineList(ctx, StrAsterisk); err != nil {
+			if !strings.Contains(err.Error(), StrErrorNotFoud) {
+				return fmt.Errorf("Could not get virtual machine list %w", err)
+			}
+		}
+	}
+	c.lastVmUpdate = time.Now()
 
 	return nil
 }
