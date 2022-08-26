@@ -1,6 +1,6 @@
 # Telegraf execd vcstat input
 
-vcstat is a VMware vSphere input plugin for [Telegraf](https://github.com/influxdata/telegraf) that gathers status and basic [stats](https://github.com/tesibelda/vcstat/blob/master/METRICS.md) from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down or to know the number of ports used by a Distributed Virtual Switch.
+vcstat is a VMware vSphere input plugin for [Telegraf](https://github.com/influxdata/telegraf) that gathers status and basic [stats](https://github.com/tesibelda/vcstat/blob/master/METRICS.md) from vCenter using govmomi library (in a similar way to [govc *.info](https://github.com/vmware/govmomi/blob/master/govc/USAGE.md) commands). You may use this input in parallel with Telegraf's vsphere input to complement the performance metrics it collects. With vcstat input's data you may be able to detect when a node goes from green to red, an HBA goes from link-up to link-down, to know the number of ports used by a Distributed Virtual Switch or create a basic capacity dashboard.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/tesibelda/vcstat/raw/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tesibelda/vcstat)](https://goreportcard.com/report/github.com/tesibelda/vcstat)
@@ -34,22 +34,24 @@ Use telegraf v1.14 or above so that execd input is available.
   # insecure_skip_verify = false
 
   #### you may enable or disable data collection per instance type ####
-  ## collect cluster measurements (vcstat_cluster)
+  ## collect cluster measurement (vcstat_cluster)
   # cluster_instances = true
   ## collect datastore measurement (vcstat_datastore)
   # datastore_instances = false
-  ## collect host status measurements (vcstat_host)
+  ## collect host status measurement (vcstat_host)
   # host_instances = true
   ## collect host firewall measurement (vcstat_host_firewall)
   # host_firewall_instances = false
-  ## collect host bus adapter measurements (vcstat_host_hba)
+  ## collect host bus adapter measurement (vcstat_host_hba)
   # host_hba_instances = false
-  ## collect host network interface measurements (vcstat_host_nic)
+  ## collect host network interface measurement (vcstat_host_nic)
   # host_nic_instances = false
-  ## collect network distributed virtual switch measurements (vcstat_net_dvs)
+  ## collect network distributed virtual switch measurement (vcstat_net_dvs)
   # net_dvs_instances = true
-  ## collect network distributed virtual portgroup measurements (vcstat_net_dvp)
+  ## collect network distributed virtual portgroup measurement (vcstat_net_dvp)
   # net_dvp_instances = false
+  ## collect virtual machine measurement (vcstat_vm)
+  # vm_instances = false
 ```
 
 * Edit telegraf's execd input configuration as needed. Example:
