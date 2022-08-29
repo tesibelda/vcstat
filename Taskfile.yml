@@ -20,9 +20,9 @@ tasks:
       - task: test
 
   mod:
-    desc: Downloads and tidy Go modules
+    desc: Init and tidy Go modules
     cmds:
-      - go mod download
+      - go mod init
       - go mod tidy
 
   lint:
