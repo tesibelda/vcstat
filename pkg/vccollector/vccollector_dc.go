@@ -21,11 +21,11 @@ func (c *VcCollector) CollectDatacenterInfo(
 	var err error
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get datacenters info: %w", Error_NoClient)
 	}
 
 	if err = c.getAllDatacentersEntities(ctx); err != nil {
-		return fmt.Errorf("Could not get all datacenter entity lists: %w", err)
+		return fmt.Errorf("Could not get all datacenters entity lists: %w", err)
 	}
 	for i, dc := range c.dcs {
 		dctags := getDcTags(

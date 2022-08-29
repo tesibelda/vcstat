@@ -34,7 +34,7 @@ func (c *VcCollector) CollectNetDVS(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get network DVSs info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return fmt.Errorf("Could not get network entity list: %w", err)
@@ -102,7 +102,7 @@ func (c *VcCollector) CollectNetDVP(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get network DVPs info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return fmt.Errorf("Could not get network entity list: %w", err)

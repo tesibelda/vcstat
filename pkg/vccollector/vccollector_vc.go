@@ -19,7 +19,7 @@ func (c *VcCollector) CollectVcenterInfo(
 	acc telegraf.Accumulator,
 ) error {
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get vcenter info: %w", Error_NoClient)
 	}
 	cli := c.client.Client
 

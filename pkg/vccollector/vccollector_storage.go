@@ -30,7 +30,7 @@ func (c *VcCollector) CollectDatastoresInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get datastores info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersDatastores(ctx); err != nil {
 		return fmt.Errorf("Could not get datastore entity list: %w", err)

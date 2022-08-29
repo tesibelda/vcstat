@@ -31,7 +31,7 @@ func (c *VcCollector) CollectClusterInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get clusters info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -43,7 +43,7 @@ func (c *VcCollector) CollectClusterInfo(
 			err = cluster.Properties(ctx, cluster.Reference(), []string{"summary"}, &clMo)
 			if err != nil {
 				return fmt.Errorf(
-					"Could not get cluster %s summary property: %s",
+					"Could not get cluster %s summary property: %w",
 					cluster.Name(),
 					err,
 				)

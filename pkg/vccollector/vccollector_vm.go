@@ -29,7 +29,7 @@ func (c *VcCollector) CollectVmsInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get VMs info: %w", Error_NoClient)
 	}
 
 	if err := c.getAllDatacentersVMs(ctx); err != nil {
@@ -83,7 +83,7 @@ func (c *VcCollector) CollectVmsInfo(
 				string(r.PowerState),
 				vmPowerStateCode(string(r.PowerState)),
 				r.MaxCpuUsage,
-				r.MaxMemoryUsage,
+				int64(r.MaxMemoryUsage)*(1024*1024),
 				int64(s.Config.MemorySizeMB)*(1024*1024),
 				s.Config.NumCpu,
 				t.NumEthernetCards,
@@ -119,8 +119,8 @@ func getVmFields(
 	connectioncode int16,
 	powerstate string,
 	powerstatecode int16,
-	maxcpu, maxmemory int32,
-	memorysize int64,
+	maxcpu int32,
+	maxmemory, memorysize int64,
 	numcpu, numeth, numvdisk int32,
 	template, consolidationneeded bool,
 ) map[string]interface{} {
@@ -129,7 +129,7 @@ func getVmFields(
 		"connection_state_code": connectioncode,
 		"consolidation_needed":  consolidationneeded,
 		"max_cpu_usage":    maxcpu,
-		"max_mem_usage":    maxcpu,
+		"max_mem_usage":    maxmemory,
 		"memory_size":      memorysize,
 		"num_eth_cards":    numeth,
 		"num_vdisks":       numvdisk,

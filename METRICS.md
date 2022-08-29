@@ -31,9 +31,9 @@
 	- num_effective_hosts (int)
 	- num_cpu_cores (int)
 	- num_cpu_threads (int)
-	- total_cpu (int)
+	- total_cpu (int) in MHz
 	- total_memory (int) in bytes
-	- effective_cpu (int)
+	- effective_cpu (int) in MHz
 	- effective_memory (int) in bytes
 - vcstat_datastore
   - tags:
@@ -148,7 +148,7 @@
 	- connection_state (string)
 	- connection_state_code (int) 0-connected, 1-orphaned, 2-invalid, 3-disconnected, 4-inaccessible
 	- consolidation_needed (bool)
-	- max_cpu_usage (int)
+	- max_cpu_usage (int) in MHz
 	- max_mem_usage (int) in bytes
 	- memory_size (int) in bytes
 	- num_eth_cards (int)

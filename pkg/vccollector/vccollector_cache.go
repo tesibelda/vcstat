@@ -7,8 +7,8 @@ package vccollector
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/vmware/govmomi/find"
@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	StrAsterisk     = "*"
-	StrErrorNotFoud = "'*' not found"
+	strAsterisk = "*"
+)
+var (
+	findNotFoundError *find.NotFoundError
 )
 
 type hostState struct {
@@ -50,7 +52,7 @@ func (c *VcCollector) getDatacenters(ctx context.Context) error {
 	}
 
 	finder := find.NewFinder(c.client.Client, false)
-	if c.dcs, err = finder.DatacenterList(ctx, StrAsterisk); err != nil {
+	if c.dcs, err = finder.DatacenterList(ctx, strAsterisk); err != nil {
 		return fmt.Errorf("Could not get datacenter list: %w", err)
 	}
 	c.lastDCUpdate = time.Now()
@@ -92,15 +94,15 @@ func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) err
 		finder.SetDatacenter(dc)
 
 		// clusters
-		if c.clusters[i], err = finder.ClusterComputeResourceList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
+		if c.clusters[i], err = finder.ClusterComputeResourceList(ctx, strAsterisk); err != nil {
+			if !errors.As(err, &findNotFoundError) {
 				return fmt.Errorf("Could not get datacenter cluster list: %w", err)
 			}
 		}
 
 		// hosts
 		numhosts = len(c.hosts[i])
-		if c.hosts[i], err = finder.HostSystemList(ctx, StrAsterisk); err != nil {
+		if c.hosts[i], err = finder.HostSystemList(ctx, strAsterisk); err != nil {
 			return fmt.Errorf("Could not get datacenter node list: %w", err)
 		}
 
@@ -137,9 +139,9 @@ func (c *VcCollector) getAllDatacentersNetworks(ctx context.Context) error {
 		finder := find.NewFinder(c.client.Client, false)
 		finder.SetDatacenter(dc)
 
-		if c.nets[i], err = finder.NetworkList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
-				return fmt.Errorf("Could not get datacenter network list %w", err)
+		if c.nets[i], err = finder.NetworkList(ctx, strAsterisk); err != nil {
+			if !errors.As(err, &findNotFoundError) {
+				return fmt.Errorf("Could not get datacenter network list: %w", err)
 			}
 		}
 	}
@@ -170,9 +172,9 @@ func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
 		finder := find.NewFinder(c.client.Client, false)
 		finder.SetDatacenter(dc)
 
-		if c.dss[i], err = finder.DatastoreList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
-				return fmt.Errorf("Could not get datacenter datastore list %w", err)
+		if c.dss[i], err = finder.DatastoreList(ctx, strAsterisk); err != nil {
+			if !errors.As(err, &findNotFoundError) {
+				return fmt.Errorf("Could not get datacenter datastore list: %w", err)
 			}
 		}
 	}
@@ -203,9 +205,9 @@ func (c *VcCollector) getAllDatacentersVMs(ctx context.Context) error {
 		finder := find.NewFinder(c.client.Client, false)
 		finder.SetDatacenter(dc)
 
-		if c.vms[i], err = finder.VirtualMachineList(ctx, StrAsterisk); err != nil {
-			if !strings.Contains(err.Error(), StrErrorNotFoud) {
-				return fmt.Errorf("Could not get virtual machine list %w", err)
+		if c.vms[i], err = finder.VirtualMachineList(ctx, strAsterisk); err != nil {
+			if !errors.As(err, &findNotFoundError) {
+				return fmt.Errorf("Could not get virtual machine list: %w", err)
 			}
 		}
 	}

@@ -39,10 +39,9 @@ type VcCollector struct {
 }
 
 // Common errors raised by vccollector
-const (
-	Error_NoClient   = "No vCenter client, please open a session"
-	Error_URLParsing = "Error parsing URL for vcenter"
-	Error_NotVC      = "Endpoint does not look like a vCenter"
+var (
+	Error_NoClient = errors.New("no vCenter client, no session has been opened")
+	Error_NotVC    = errors.New("endpoint does not look like a vCenter")
 )
 
 // NewVCCollector returns a new VcCollector associated with the provided vCenter URL
@@ -63,10 +62,10 @@ func NewVCCollector(
 
 	// Parse URL params
 	if vcc.url, err = soap.ParseURL(vcenterUrl); err != nil {
-		return nil, fmt.Errorf(string(Error_URLParsing + ": %w" + err.Error()))
+		return nil, fmt.Errorf("Error parsing URL for vcenter: %w", err)
 	}
 	if vcc.url == nil {
-		return nil, fmt.Errorf(string(Error_URLParsing + ": returned nil"))
+		return nil, fmt.Errorf("Error parsing URL for vcenter: returned nil")
 	}
 	vcc.url.User = url.UserPassword(user, pass)
 
@@ -117,7 +116,7 @@ func (c *VcCollector) Open(ctx context.Context, timeout time.Duration) error {
 	}
 	if !c.client.IsVC() {
 		c.Close(ctx)
-		return fmt.Errorf(Error_NotVC)
+		return fmt.Errorf("Could not open vCenter session: %w", Error_NotVC)
 	}
 
 	return err

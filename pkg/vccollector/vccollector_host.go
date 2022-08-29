@@ -33,7 +33,7 @@ func (c *VcCollector) CollectHostInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get host info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -42,7 +42,7 @@ func (c *VcCollector) CollectHostInfo(
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state struc tfor %s", host.Name()))
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
@@ -111,7 +111,7 @@ func (c *VcCollector) CollectHostHBA(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get host HBAs info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -197,7 +197,7 @@ func (c *VcCollector) CollectHostNIC(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get host NICs info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -279,7 +279,7 @@ func (c *VcCollector) CollectHostFw(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not get host firewalls info: %w", Error_NoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -375,7 +375,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf(string(Error_NoClient))
+		return fmt.Errorf("Could not report host esxcli responses info: %w", Error_NoClient)
 	}
 
 	for i, dc := range c.dcs {
