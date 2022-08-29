@@ -102,7 +102,7 @@ vcstat_host_esxcli,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.loc
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1653060682000000000
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1653060682000000000
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommitted=20511i,maintenance_mode="normal" 
-vcstat_vm,clustername=MyCluster-01,dcname=MyDC,esxhostname=myesxi01.local,moid=vm-4524,vcenter.local,vmname=vmserver01 consolidation_needed=false,memory_overhead=0i,num_eth_cards=2i,status="green",memory_size=25769803776i,num_vdisks=8i,num_vcpus=4i,power_state="poweredOn",power_state_code=0i,status_code=0i,template=false 1653060683000000000
+vcstat_vm,clustername=MyCluster-01,dcname=MyDC,esxhostname=myesxi01.local,moid=vm-4524,vcenter.local,vmname=vmserver01 status_code=0i,connection_state="connected",max_mem_usage=23944i,num_vcpus=8i,power_state_code=0i,status="green",max_cpu_usage=23944i,num_vdisks=3i,power_state="poweredOn",template=false,consolidation_needed=false,memory_size=34359738368i,connection_state_code=0i,num_eth_cards=4i 1653060683000000000
 internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i,notresponding_esxcli_hosts=0i 1653060683000000000
 ```
 

@@ -145,9 +145,12 @@
   - fields:
 	- status (string)
 	- status_code (int) 0-green, 1-gray, 2-yellow, 3-red
+	- connection_state (string)
+	- connection_state_code (int) 0-connected, 1-orphaned, 2-invalid, 3-disconnected, 4-inaccessible
 	- consolidation_needed (bool)
+	- max_cpu_usage (int)
+	- max_mem_usage (int) in bytes
 	- memory_size (int) in bytes
-	- memory_overhead (int) in bytes
 	- num_eth_cards (int)
 	- num_vdisks (int)
 	- num_vcpus (int)

@@ -24,7 +24,6 @@ func (c *VcCollector) CollectVmsInfo(
 	var (
 		vmMo   mo.VirtualMachine
 		err    error
-		vmCode int16
 		host   *object.HostSystem
 		hostname, clustername string
 	)
@@ -60,7 +59,6 @@ func (c *VcCollector) CollectVmsInfo(
 			s := vmMo.Summary
 			r := s.Runtime
 			t := s.Config
-			vmCode = entityStatusCode(s.OverallStatus)
 			hostname = ""
 			clustername = ""
 			if host = c.getHostObjectFromReference(i, r.Host); host != nil {
@@ -79,10 +77,13 @@ func (c *VcCollector) CollectVmsInfo(
 			)
 			vmfields := getVmFields(
 				string(s.OverallStatus),
-				vmCode,
+				entityStatusCode(s.OverallStatus),
+				string(r.ConnectionState),
+				vmConnectionStateCode(string(r.ConnectionState)),
 				string(r.PowerState),
 				vmPowerStateCode(string(r.PowerState)),
-				r.MemoryOverhead,
+				r.MaxCpuUsage,
+				r.MaxMemoryUsage,
 				int64(s.Config.MemorySizeMB)*(1024*1024),
 				s.Config.NumCpu,
 				t.NumEthernetCards,
@@ -114,16 +115,22 @@ func getVmTags(
 func getVmFields(
 	overallstatus string,
 	vmstatuscode int16,
+	connectionstate string,
+	connectioncode int16,
 	powerstate string,
 	powerstatecode int16,
-	memoryoverhead, memorysize int64,
+	maxcpu, maxmemory int32,
+	memorysize int64,
 	numcpu, numeth, numvdisk int32,
 	template, consolidationneeded bool,
 ) map[string]interface{} {
 	return map[string]interface{}{
-		"consolidation_needed": consolidationneeded,
+		"connection_state":      connectionstate,
+		"connection_state_code": connectioncode,
+		"consolidation_needed":  consolidationneeded,
+		"max_cpu_usage":    maxcpu,
+		"max_mem_usage":    maxcpu,
 		"memory_size":      memorysize,
-		"memory_overhead":  memoryoverhead,
 		"num_eth_cards":    numeth,
 		"num_vdisks":       numvdisk,
 		"num_vcpus":        numcpu,
@@ -146,5 +153,23 @@ func vmPowerStateCode(state string) int16 {
 		return 2
 	default:
 		return 3
+	}
+}
+
+// vmConnectionStateCode converts VM ConnectionStateCode to int16 for easy alerting
+func vmConnectionStateCode(state string) int16 {
+	switch state {
+	case "connected":
+		return 0
+	case "orphaned":
+		return 1
+	case "invalid":
+		return 2
+	case "disconnected":
+		return 3
+	case "inaccessible":
+		return 4
+	default:
+		return 5
 	}
 }
