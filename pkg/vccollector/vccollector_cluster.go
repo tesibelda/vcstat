@@ -23,11 +23,12 @@ func (c *VcCollector) CollectClusterInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		clusters          []*object.ClusterComputeResource
-		clMo              mo.ClusterComputeResource
-		resourceSum       *(types.ComputeResourceSummary)
-		clusterStatusCode int16
-		err               error
+		clusters    []*object.ClusterComputeResource
+		clMo        mo.ClusterComputeResource
+		resourceSum *(types.ComputeResourceSummary)
+		usageSum    *types.ClusterUsageSummary
+		numVms      int32
+		err         error
 	)
 
 	if c.client == nil {
@@ -51,7 +52,13 @@ func (c *VcCollector) CollectClusterInfo(
 			if resourceSum = clMo.Summary.GetComputeResourceSummary(); resourceSum == nil {
 				return fmt.Errorf("Could not get cluster resource summary")
 			}
-			clusterStatusCode = entityStatusCode(resourceSum.OverallStatus)
+
+			// get number of VMs in the cluster (tip: https://github.com/vmware/govmomi/issues/1247)
+			numVms = 0
+			usageSum = clMo.Summary.(*types.ClusterComputeResourceSummary).UsageSummary
+			if usageSum != nil {
+				numVms = usageSum.TotalVmCount
+			}
 
 			cltags := getClusterTags(
 				c.client.Client.URL().Host,
@@ -61,15 +68,16 @@ func (c *VcCollector) CollectClusterInfo(
 			)
 			clfields := getClusterFields(
 				string(resourceSum.OverallStatus),
-				clusterStatusCode,
+				entityStatusCode(resourceSum.OverallStatus),
 				resourceSum.NumHosts,
 				resourceSum.NumEffectiveHosts,
 				resourceSum.NumCpuCores,
 				resourceSum.NumCpuThreads,
-				int(resourceSum.TotalCpu),
-				int(resourceSum.TotalMemory),
-				int(resourceSum.EffectiveCpu),
-				int(resourceSum.EffectiveMemory),
+				int64(resourceSum.TotalCpu),
+				resourceSum.TotalMemory,
+				int64(resourceSum.EffectiveCpu),
+				resourceSum.EffectiveMemory,
+				numVms,
 			)
 			acc.AddFields("vcstat_cluster", clfields, cltags, time.Now())
 		}
@@ -92,7 +100,8 @@ func getClusterFields(
 	clusterstatuscode int16,
 	numhosts, numeffectivehosts int32,
 	numcpucores, numcputhreads int16,
-	totalcpu, totalmemory, effectivecpu, effectivememory int,
+	totalcpu, totalmemory, effectivecpu, effectivememory int64,
+	numvms int32,	
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"effective_cpu":       effectivecpu,
@@ -100,6 +109,7 @@ func getClusterFields(
 		"num_cpu_cores":       numcpucores,
 		"num_cpu_threads":     numcputhreads,
 		"num_effective_hosts": numeffectivehosts,
+		"num_vms":             numvms,
 		"num_hosts":           numhosts,
 		"status":              overallstatus,
 		"status_code":         clusterstatuscode,

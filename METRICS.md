@@ -31,6 +31,7 @@
 	- num_effective_hosts (int)
 	- num_cpu_cores (int)
 	- num_cpu_threads (int)
+	- num_vms (int)
 	- total_cpu (int) in MHz
 	- total_memory (int) in bytes
 	- effective_cpu (int) in MHz
