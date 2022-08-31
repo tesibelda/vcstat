@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 
 	"github.com/tesibelda/vcstat/internal/vccollector"
+	"github.com/tesibelda/vcstat/pkg/tgplus"
 )
 
 type VCstatConfig struct {
@@ -189,9 +190,9 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	)
 
 	if err = vcs.keepActiveSession(acc); err != nil {
-		return gatherError(acc, err)
+		return tgplus.GatherError(acc, err)
 	}
-	acc.SetPrecision(getPrecision(vcs.pollInterval))
+	acc.SetPrecision(tgplus.GetPrecision(vcs.pollInterval))
 
 	// poll using a context with timeout
 	ctxT, cancelT := context.WithTimeout(vcs.ctx, time.Duration(vcs.Timeout))
@@ -200,23 +201,23 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 
 	//--- Get vCenter, DCs and Clusters info
 	if err = vcs.gatherHighLevelEntities(ctxT, acc); err != nil {
-		return gatherError(acc, err)
+		return tgplus.GatherError(acc, err)
 	}
 
 	//--- Get Hosts, Networks and Storage info
 	if err = vcs.gatherHost(ctxT, acc); err != nil {
-		return gatherError(acc, err)
+		return tgplus.GatherError(acc, err)
 	}
 	if err = vcs.gatherNetwork(ctxT, acc); err != nil {
-		return gatherError(acc, err)
+		return tgplus.GatherError(acc, err)
 	}
 	if err = vcs.gatherStorage(ctxT, acc); err != nil {
-		return gatherError(acc, err)
+		return tgplus.GatherError(acc, err)
 	}
 
 	//--- Get VM info
 	if err = vcs.gatherVM(ctxT, acc); err != nil {
-		return gatherError(acc, err)
+		return tgplus.GatherError(acc, err)
 	}
 
 	// selfmonitoring
@@ -357,12 +358,12 @@ func (vcs *VCstatConfig) gatherStorage(ctx context.Context, acc telegraf.Accumul
 	if vcs.DatastoreInstances {
 		var col *vccollector.VcCollector
 		var err error
-		col = vcs.vcc		
+		col = vcs.vcc
 		if col == nil {
 			return nil
 		}
 		if err = col.CollectDatastoresInfo(ctx, acc); err != nil {
-			return gatherError(acc, err)
+			return tgplus.GatherError(acc, err)
 		}
 	}
 
@@ -374,38 +375,14 @@ func (vcs *VCstatConfig) gatherVM(ctx context.Context, acc telegraf.Accumulator)
 	if vcs.VMInstances {
 		var col *vccollector.VcCollector
 		var err error
-		col = vcs.vcc		
+		col = vcs.vcc
 		if col == nil {
 			return nil
 		}
 		if err = col.CollectVmsInfo(ctx, acc); err != nil {
-			return gatherError(acc, err)
+			return tgplus.GatherError(acc, err)
 		}
 	}
 
 	return nil
-}
-
-// gatherError adds the error to the telegraf accumulator
-func gatherError(acc telegraf.Accumulator, err error) error {
-	// No need to signal errors if we were merely canceled.
-	if err == context.Canceled {
-		return nil
-	}
-	acc.AddError(err)
-	return nil
-}
-
-// getPrecision returns the rounding precision for metrics
-func getPrecision(interval time.Duration) time.Duration {
-	switch {
-	case interval >= time.Second:
-		return time.Second
-	case interval >= time.Millisecond:
-		return time.Millisecond
-	case interval >= time.Microsecond:
-		return time.Microsecond
-	default:
-		return time.Nanosecond
-	}
 }

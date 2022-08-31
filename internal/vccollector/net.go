@@ -14,6 +14,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/tesibelda/vcstat/pkg/govplus"
+
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
@@ -34,7 +36,7 @@ func (c *VcCollector) CollectNetDVS(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get network DVSs info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get network DVSs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return fmt.Errorf("Could not get network entity list: %w", err)
@@ -55,7 +57,7 @@ func (c *VcCollector) CollectNetDVS(
 					&dvsMo,
 				)
 				if err != nil {
-					if err, exit := govQueryError(err); exit {
+					if err, exit := govplus.IsHardQueryError(err); exit {
 						return err
 					}
 					acc.AddError(fmt.Errorf("Could not get dvs config property: %w", err))
@@ -102,7 +104,7 @@ func (c *VcCollector) CollectNetDVP(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get network DVPs info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get network DVPs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return fmt.Errorf("Could not get network entity list: %w", err)
@@ -122,7 +124,7 @@ func (c *VcCollector) CollectNetDVP(
 					&dvpMo,
 				)
 				if err != nil {
-					if err, exit := govQueryError(err); exit {
+					if err, exit := govplus.IsHardQueryError(err); exit {
 						return err
 					}
 					acc.AddError(fmt.Errorf("Could not get dvp config property: %w", err))

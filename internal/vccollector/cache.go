@@ -18,6 +18,7 @@ import (
 const (
 	strAsterisk = "*"
 )
+
 var (
 	findNotFoundError *find.NotFoundError
 )

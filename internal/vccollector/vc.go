@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+
+	"github.com/tesibelda/vcstat/pkg/govplus"
 )
 
 // CollectVcenterInfo gathers basic vcenter info
@@ -19,7 +21,7 @@ func (c *VcCollector) CollectVcenterInfo(
 	acc telegraf.Accumulator,
 ) error {
 	if c.client == nil {
-		return fmt.Errorf("Could not get vcenter info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get vcenter info: %w", govplus.ErrorNoClient)
 	}
 	cli := c.client.Client
 

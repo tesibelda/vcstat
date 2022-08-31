@@ -12,6 +12,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/tesibelda/vcstat/pkg/govplus"
+
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
@@ -30,7 +32,7 @@ func (c *VcCollector) CollectDatastoresInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get datastores info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get datastores info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersDatastores(ctx); err != nil {
 		return fmt.Errorf("Could not get datastore entity list: %w", err)
@@ -45,7 +47,7 @@ func (c *VcCollector) CollectDatastoresInfo(
 		}
 		err = pc.Retrieve(ctx, refs, []string{"summary"}, &dsMo)
 		if err != nil {
-			if err, exit := govQueryError(err); exit {
+			if err, exit := govplus.IsHardQueryError(err); exit {
 				return err
 			}
 			acc.AddError(fmt.Errorf("Could not retrieve summary for datastore: %w", err))

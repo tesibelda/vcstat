@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+
+	"github.com/tesibelda/vcstat/pkg/govplus"
 )
 
 // CollectDatacenterInfo gathers datacenter info
@@ -21,7 +23,7 @@ func (c *VcCollector) CollectDatacenterInfo(
 	var err error
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get datacenters info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get datacenters info: %w", govplus.ErrorNoClient)
 	}
 
 	if err = c.getAllDatacentersEntities(ctx); err != nil {

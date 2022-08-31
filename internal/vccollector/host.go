@@ -14,6 +14,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/tesibelda/vcstat/pkg/govplus"
+
 	"github.com/vmware/govmomi/govc/host/esxcli"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
@@ -29,11 +31,15 @@ func (c *VcCollector) CollectHostInfo(
 		hsMo                     mo.HostSystem
 		hostSt                   *hostState
 		err                      error
+		exit					 bool
+		s						 *(types.HostListSummary)
+		r						 *(types.HostRuntimeInfo)
+		h						 *(types.HostHardwareSummary)
 		hsCode, hsConnectionCode int16
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get host info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -47,7 +53,7 @@ func (c *VcCollector) CollectHostInfo(
 			}
 			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
 			if err != nil {
-				if err, exit := govQueryError(err); exit {
+				if err, exit = govplus.IsHardQueryError(err); exit {
 					return fmt.Errorf(
 						"Could not get host %s summary property: %w",
 						host.Name(),
@@ -63,9 +69,9 @@ func (c *VcCollector) CollectHostInfo(
 				)
 				continue
 			}
-			s := hsMo.Summary
-			r := s.Runtime
-			h := s.Hardware
+			s = &hsMo.Summary
+			r = s.Runtime
+			h = s.Hardware
 			hostSt.setNotConnected(
 				r.ConnectionState != types.HostSystemConnectionStateConnected,
 			)
@@ -111,7 +117,7 @@ func (c *VcCollector) CollectHostHBA(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host HBAs info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get host HBAs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -140,7 +146,7 @@ func (c *VcCollector) CollectHostHBA(
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
-				if err, exit := govQueryError(err); exit {
+				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(
@@ -197,7 +203,7 @@ func (c *VcCollector) CollectHostNIC(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host NICs info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get host NICs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -220,7 +226,7 @@ func (c *VcCollector) CollectHostNIC(
 			res, err = x.Run([]string{"network", "nic", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
-				if err, exit := govQueryError(err); exit {
+				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(
@@ -279,7 +285,7 @@ func (c *VcCollector) CollectHostFw(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host firewalls info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get host firewalls info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -308,7 +314,7 @@ func (c *VcCollector) CollectHostFw(
 			res, err = x.Run([]string{"network", "firewall", "get"})
 			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
-				if err, exit := govQueryError(err); exit {
+				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(
@@ -375,7 +381,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not report host esxcli responses info: %w", Error_NoClient)
+		return fmt.Errorf("Could not report host esxcli responses info: %w", govplus.ErrorNoClient)
 	}
 
 	for i, dc := range c.dcs {

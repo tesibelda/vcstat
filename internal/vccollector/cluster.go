@@ -12,6 +12,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/tesibelda/vcstat/pkg/govplus"
+
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
@@ -25,14 +27,14 @@ func (c *VcCollector) CollectClusterInfo(
 	var (
 		clusters    []*object.ClusterComputeResource
 		clMo        mo.ClusterComputeResource
-		resourceSum *(types.ComputeResourceSummary)
-		usageSum    *types.ClusterUsageSummary
+		resourceSum *(types.ClusterComputeResourceSummary)
+		usageSum    *(types.ClusterUsageSummary)
 		numVms      int32
 		err         error
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get clusters info: %w", Error_NoClient)
+		return fmt.Errorf("Could not get clusters info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
@@ -49,13 +51,13 @@ func (c *VcCollector) CollectClusterInfo(
 					err,
 				)
 			}
-			if resourceSum = clMo.Summary.GetComputeResourceSummary(); resourceSum == nil {
+			if resourceSum = clMo.Summary.(*types.ClusterComputeResourceSummary); resourceSum == nil {
 				return fmt.Errorf("Could not get cluster resource summary")
 			}
 
 			// get number of VMs in the cluster (tip: https://github.com/vmware/govmomi/issues/1247)
 			numVms = 0
-			usageSum = clMo.Summary.(*types.ClusterComputeResourceSummary).UsageSummary
+			usageSum = resourceSum.UsageSummary
 			if usageSum != nil {
 				numVms = usageSum.TotalVmCount
 			}
@@ -101,7 +103,7 @@ func getClusterFields(
 	numhosts, numeffectivehosts int32,
 	numcpucores, numcputhreads int16,
 	totalcpu, totalmemory, effectivecpu, effectivememory int64,
-	numvms int32,	
+	numvms int32,
 ) map[string]interface{} {
 	return map[string]interface{}{
 		"effective_cpu":       effectivecpu,
