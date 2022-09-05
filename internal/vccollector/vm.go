@@ -28,6 +28,8 @@ func (c *VcCollector) CollectVmsInfo(
 		vmMo                  mo.VirtualMachine
 		err                   error
 		exit                  bool
+		vmtags                map[string]string
+		vmfields              map[string]interface{}
 		host                  *object.HostSystem
 		s                     *types.VirtualMachineSummary
 		r                     *types.VirtualMachineRuntimeInfo
@@ -42,6 +44,10 @@ func (c *VcCollector) CollectVmsInfo(
 	if err := c.getAllDatacentersVMs(ctx); err != nil {
 		return fmt.Errorf("Could not get virtual machine entity list: %w", err)
 	}
+
+	// reserve map memory for tags and fields according to setVmTags and setVmFields
+	vmtags = make(map[string]string, 7)
+	vmfields = make(map[string]interface{}, 14)
 
 	for i, dc := range c.dcs {
 		for _, vm := range c.vms[i] {
@@ -73,7 +79,8 @@ func (c *VcCollector) CollectVmsInfo(
 				clustername = c.getClusternameFromHost(i, host)
 			}
 
-			vmtags := getVmTags(
+			setVmTags(
+				vmtags,
 				c.client.Client.URL().Host,
 				dc.Name(),
 				clustername,
@@ -82,7 +89,8 @@ func (c *VcCollector) CollectVmsInfo(
 				t.Name,
 				s.Guest.HostName,
 			)
-			vmfields := getVmFields(
+			setVmFields(
+				vmfields,
 				string(s.OverallStatus),
 				entityStatusCode(s.OverallStatus),
 				string(r.ConnectionState),
@@ -105,21 +113,21 @@ func (c *VcCollector) CollectVmsInfo(
 	return nil
 }
 
-func getVmTags(
+func setVmTags(
+	tags map[string]string,
 	vcenter, dcname, cluster, hostname, moid, vmname, guesthostname string,
-) map[string]string {
-	return map[string]string{
-		"clustername":   cluster,
-		"dcname":        dcname,
-		"esxhostname":   hostname,
-		"guesthostname": guesthostname,
-		"moid":          moid,
-		"vcenter":       vcenter,
-		"vmname":        vmname,
-	}
+) {
+	tags["clustername"] = cluster
+	tags["dcname"] = dcname
+	tags["esxhostname"] = hostname
+	tags["guesthostname"] = guesthostname
+	tags["moid"] = moid
+	tags["vcenter"] = vcenter
+	tags["vmname"] = vmname
 }
 
-func getVmFields(
+func setVmFields(
+	fields map[string]interface{},
 	overallstatus string,
 	vmstatuscode int16,
 	connectionstate string,
@@ -130,23 +138,21 @@ func getVmFields(
 	maxmemory, memorysize int64,
 	numcpu, numeth, numvdisk int32,
 	template, consolidationneeded bool,
-) map[string]interface{} {
-	return map[string]interface{}{
-		"connection_state":      connectionstate,
-		"connection_state_code": connectioncode,
-		"consolidation_needed":  consolidationneeded,
-		"max_cpu_usage":         maxcpu,
-		"max_mem_usage":         maxmemory,
-		"memory_size":           memorysize,
-		"num_eth_cards":         numeth,
-		"num_vdisks":            numvdisk,
-		"num_vcpus":             numcpu,
-		"power_state":           powerstate,
-		"power_state_code":      powerstatecode,
-		"status":                overallstatus,
-		"status_code":           vmstatuscode,
-		"template":              template,
-	}
+) {
+	fields["connection_state"] = connectionstate
+	fields["connection_state_code"] = connectioncode
+	fields["consolidation_needed"] = consolidationneeded
+	fields["max_cpu_usage"] = maxcpu
+	fields["max_mem_usage"] = maxmemory
+	fields["memory_size"] = memorysize
+	fields["num_eth_cards"] = numeth
+	fields["num_vdisks"] = numvdisk
+	fields["num_vcpus"] = numcpu
+	fields["power_state"] = powerstate
+	fields["power_state_code"] = powerstatecode
+	fields["status"] = overallstatus
+	fields["status_code"] = vmstatuscode
+	fields["template"] = template
 }
 
 // vmPowerStateCode converts VM PowerStateCode to int16 for easy alerting

@@ -25,8 +25,10 @@ func (c *VcCollector) CollectClusterInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		clusters    []*object.ClusterComputeResource
 		clMo        mo.ClusterComputeResource
+		cltags      map[string]string
+		clfields    map[string]interface{}
+		clusters    []*object.ClusterComputeResource
 		resourceSum *(types.ClusterComputeResourceSummary)
 		usageSum    *(types.ClusterUsageSummary)
 		numVms      int32
@@ -39,6 +41,10 @@ func (c *VcCollector) CollectClusterInfo(
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
+
+	// reserve map memory for tags and fields according to setClusterTags and setClusterFields
+	cltags = make(map[string]string, 4)
+	clfields = make(map[string]interface{}, 11)
 
 	for i, dc := range c.dcs {
 		clusters = c.clusters[i]
@@ -62,13 +68,15 @@ func (c *VcCollector) CollectClusterInfo(
 				numVms = usageSum.TotalVmCount
 			}
 
-			cltags := getClusterTags(
+			setClusterTags(
+				cltags,
 				c.client.Client.URL().Host,
 				dc.Name(),
 				cluster.Name(),
 				cluster.Reference().Value,
 			)
-			clfields := getClusterFields(
+			setClusterFields(
+				clfields,
 				string(resourceSum.OverallStatus),
 				entityStatusCode(resourceSum.OverallStatus),
 				resourceSum.NumHosts,
@@ -88,34 +96,34 @@ func (c *VcCollector) CollectClusterInfo(
 	return nil
 }
 
-func getClusterTags(vcenter, dcname, clustername, moid string) map[string]string {
-	return map[string]string{
-		"dcname":      dcname,
-		"clustername": clustername,
-		"moid":        moid,
-		"vcenter":     vcenter,
-	}
+func setClusterTags(
+	tags map[string]string,
+	vcenter, dcname, clustername, moid string,
+) {
+	tags["dcname"] = dcname
+	tags["clustername"] = clustername
+	tags["moid"] = moid
+	tags["vcenter"] = vcenter
 }
 
-func getClusterFields(
+func setClusterFields(
+	fields map[string]interface{},
 	overallstatus string,
 	clusterstatuscode int16,
 	numhosts, numeffectivehosts int32,
 	numcpucores, numcputhreads int16,
 	totalcpu, totalmemory, effectivecpu, effectivememory int64,
 	numvms int32,
-) map[string]interface{} {
-	return map[string]interface{}{
-		"effective_cpu":       effectivecpu,
-		"effective_memory":    effectivememory,
-		"num_cpu_cores":       numcpucores,
-		"num_cpu_threads":     numcputhreads,
-		"num_effective_hosts": numeffectivehosts,
-		"num_vms":             numvms,
-		"num_hosts":           numhosts,
-		"status":              overallstatus,
-		"status_code":         clusterstatuscode,
-		"total_cpu":           totalcpu,
-		"total_memory":        totalmemory,
-	}
+) {
+	fields["effective_cpu"] = effectivecpu
+	fields["effective_memory"] = effectivememory
+	fields["num_cpu_cores"] = numcpucores
+	fields["num_cpu_threads"] = numcputhreads
+	fields["num_effective_hosts"] = numeffectivehosts
+	fields["num_vms"] = numvms
+	fields["num_hosts"] = numhosts
+	fields["status"] = overallstatus
+	fields["status_code"] = clusterstatuscode
+	fields["total_cpu"] = totalcpu
+	fields["total_memory"] = totalmemory
 }

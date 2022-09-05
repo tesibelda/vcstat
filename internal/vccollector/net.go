@@ -27,8 +27,10 @@ func (c *VcCollector) CollectNetDVS(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		nets      []object.NetworkReference
 		dvsMo     mo.DistributedVirtualSwitch
+		dvstags   map[string]string
+		dvsfields map[string]interface{}
+		nets      []object.NetworkReference
 		dvsConfig *(types.DVSConfigInfo)
 		dvs       *object.DistributedVirtualSwitch
 		err       error
@@ -41,6 +43,10 @@ func (c *VcCollector) CollectNetDVS(
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return fmt.Errorf("Could not get network entity list: %w", err)
 	}
+
+	// reserve map memory for tags and fields according to setDVSTags and setDVSFields
+	dvstags = make(map[string]string, 4)
+	dvsfields = make(map[string]interface{}, 5)
 
 	for i, dc := range c.dcs {
 		nets = c.nets[i]
@@ -68,13 +74,15 @@ func (c *VcCollector) CollectNetDVS(
 					continue
 				}
 
-				dvstags := getDVSTags(
+				setDVSTags(
+					dvstags,
 					c.client.Client.URL().Host,
 					dc.Name(),
 					dvs.Name(),
 					net.Reference().Value,
 				)
-				dvsfields := getDVSFields(
+				setDVSFields(
+					dvsfields,
 					string(dvsMo.OverallStatus),
 					entityStatusCode(dvsMo.OverallStatus),
 					dvsConfig.NumPorts,
@@ -95,9 +103,11 @@ func (c *VcCollector) CollectNetDVP(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		nets      []object.NetworkReference
 		dvpMo     mo.DistributedVirtualPortgroup
 		dvpConfig types.DVPortgroupConfigInfo
+		dvptags   map[string]string
+		dvpfields map[string]interface{}
+		nets      []object.NetworkReference
 		dvp       *object.DistributedVirtualPortgroup
 		err       error
 		ok        bool
@@ -109,6 +119,10 @@ func (c *VcCollector) CollectNetDVP(
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
 		return fmt.Errorf("Could not get network entity list: %w", err)
 	}
+
+	// reserve map memory for tags and fields according to setDVPTags and setDVPFields
+	dvptags = make(map[string]string, 5)
+	dvpfields = make(map[string]interface{}, 3)
 
 	for i, dc := range c.dcs {
 		nets = c.nets[i]
@@ -132,14 +146,16 @@ func (c *VcCollector) CollectNetDVP(
 				}
 				dvpConfig = dvpMo.Config
 
-				dvptags := getDVPTags(
+				setDVPTags(
+					dvptags,
 					c.client.Client.URL().Host,
 					dc.Name(),
 					dvp.Name(),
 					net.Reference().Value,
 					strconv.FormatBool(*dvpConfig.Uplink),
 				)
-				dvpfields := getDVPFields(
+				setDVPFields(
+					dvpfields,
 					string(dvpMo.OverallStatus),
 					entityStatusCode(dvpMo.OverallStatus),
 					dvpConfig.NumPorts,
@@ -152,47 +168,47 @@ func (c *VcCollector) CollectNetDVP(
 	return nil
 }
 
-func getDVSTags(vcenter, dcname, dvs, moid string) map[string]string {
-	return map[string]string{
-		"dcname":  dcname,
-		"dvs":     dvs,
-		"moid":    moid,
-		"vcenter": vcenter,
-	}
+func setDVSTags(
+	tags map[string]string,
+	vcenter, dcname, dvs, moid string,
+) {
+	tags["dcname"] = dcname
+	tags["dvs"] = dvs
+	tags["moid"] = moid
+	tags["vcenter"] = vcenter
 }
 
-func getDVSFields(
+func setDVSFields(
+	fields map[string]interface{},
 	overallstatus string,
 	dvsstatuscode int16,
 	numports, maxports, numsaports int32,
-) map[string]interface{} {
-	return map[string]interface{}{
-		"max_ports":            maxports,
-		"num_ports":            numports,
-		"num_standalone_ports": numsaports,
-		"status":               overallstatus,
-		"status_code":          dvsstatuscode,
-	}
+) {
+	fields["max_ports"] = maxports
+	fields["num_ports"] = numports
+	fields["num_standalone_ports"] = numsaports
+	fields["status"] = overallstatus
+	fields["status_code"] = dvsstatuscode
 }
 
-func getDVPTags(vcenter, dcname, dvp, moid, uplink string) map[string]string {
-	return map[string]string{
-		"dcname":  dcname,
-		"dvp":     dvp,
-		"moid":    moid,
-		"uplink":  uplink,
-		"vcenter": vcenter,
-	}
+func setDVPTags(
+	tags map[string]string,
+	vcenter, dcname, dvp, moid, uplink string,
+) {
+	tags["dcname"] = dcname
+	tags["dvp"] = dvp
+	tags["moid"] = moid
+	tags["uplink"] = uplink
+	tags["vcenter"] = vcenter
 }
 
-func getDVPFields(
+func setDVPFields(
+	fields map[string]interface{},
 	overallstatus string,
 	dvpstatuscode int16,
 	numports int32,
-) map[string]interface{} {
-	return map[string]interface{}{
-		"num_ports":   numports,
-		"status":      overallstatus,
-		"status_code": dvpstatuscode,
-	}
+) {
+	fields["num_ports"] = numports
+	fields["status"] = overallstatus
+	fields["status_code"] = dvpstatuscode
 }

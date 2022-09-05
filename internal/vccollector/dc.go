@@ -20,7 +20,11 @@ func (c *VcCollector) CollectDatacenterInfo(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 ) error {
-	var err error
+	var (
+		dctags   map[string]string
+		dcfields map[string]interface{}
+		err      error
+	)
 
 	if c.client == nil {
 		return fmt.Errorf("Could not get datacenters info: %w", govplus.ErrorNoClient)
@@ -29,13 +33,20 @@ func (c *VcCollector) CollectDatacenterInfo(
 	if err = c.getAllDatacentersEntities(ctx); err != nil {
 		return fmt.Errorf("Could not get all datacenters entity lists: %w", err)
 	}
+
+	// reserve map memory for tags and fields according to setDcTags and setDcFields
+	dctags = make(map[string]string, 3)
+	dcfields = make(map[string]interface{}, 4)
+
 	for i, dc := range c.dcs {
-		dctags := getDcTags(
+		setDcTags(
+			dctags,
 			c.client.Client.URL().Host,
 			dc.Name(),
 			dc.Reference().Value,
 		)
-		dcfields := getDcFields(
+		setDcFields(
+			dcfields,
 			len(c.clusters[i]),
 			len(c.hosts[i]),
 			len(c.dss[i]),
@@ -66,19 +77,21 @@ func (c *VcCollector) getAllDatacentersEntities(ctx context.Context) error {
 	return err
 }
 
-func getDcTags(vcenter, dcname, moid string) map[string]string {
-	return map[string]string{
-		"dcname":  dcname,
-		"moid":    moid,
-		"vcenter": vcenter,
-	}
+func setDcTags(
+	tags map[string]string,
+	vcenter, dcname, moid string,
+) {
+	tags["dcname"] = dcname
+	tags["moid"] = moid
+	tags["vcenter"] = vcenter
 }
 
-func getDcFields(clusters, hosts, datastores, networks int) map[string]interface{} {
-	return map[string]interface{}{
-		"num_clusters":   clusters,
-		"num_datastores": datastores,
-		"num_hosts":      hosts,
-		"num_networks":   networks,
-	}
+func setDcFields(
+	fields map[string]interface{},
+	clusters, hosts, datastores, networks int,
+) {
+	fields["num_clusters"] = clusters
+	fields["num_datastores"] = datastores
+	fields["num_hosts"] = hosts
+	fields["num_networks"] = networks
 }

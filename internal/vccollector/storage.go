@@ -26,9 +26,11 @@ func (c *VcCollector) CollectDatastoresInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		refs []types.ManagedObjectReference
-		dsMo []mo.Datastore
-		err  error
+		dstags   map[string]string
+		dsfields map[string]interface{}
+		refs     []types.ManagedObjectReference
+		dsMo     []mo.Datastore
+		err      error
 	)
 
 	if c.client == nil {
@@ -37,6 +39,10 @@ func (c *VcCollector) CollectDatastoresInfo(
 	if err = c.getAllDatacentersDatastores(ctx); err != nil {
 		return fmt.Errorf("Could not get datastore entity list: %w", err)
 	}
+
+	// reserve map memory for tags and fields according to setDsTags and setDsFields
+	dstags = make(map[string]string, 5)
+	dsfields = make(map[string]interface{}, 5)
 
 	pc := property.DefaultCollector(c.client.Client)
 
@@ -54,14 +60,16 @@ func (c *VcCollector) CollectDatastoresInfo(
 			continue
 		}
 		for _, ds := range dsMo {
-			dstags := getDsTags(
+			setDsTags(
+				dstags,
 				c.client.Client.URL().Host,
 				dc.Name(),
 				ds.Summary.Name,
 				ds.Reference().Value,
 				ds.Summary.Type,
 			)
-			dsfields := getDsFields(
+			setDsFields(
+				dsfields,
 				ds.Summary.Accessible,
 				ds.Summary.Capacity,
 				ds.Summary.FreeSpace,
@@ -75,22 +83,24 @@ func (c *VcCollector) CollectDatastoresInfo(
 	return nil
 }
 
-func getDsTags(vcenter, dcname, dsname, moid, dstype string) map[string]string {
-	return map[string]string{
-		"dcname":  dcname,
-		"dsname":  dsname,
-		"moid":    moid,
-		"type":    dstype,
-		"vcenter": vcenter,
-	}
+func setDsTags(
+	tags map[string]string,
+	vcenter, dcname, dsname, moid, dstype string,
+) {
+	tags["dcname"] = dcname
+	tags["dsname"] = dsname
+	tags["moid"] = moid
+	tags["type"] = dstype
+	tags["vcenter"] = vcenter
 }
 
-func getDsFields(accessible bool, capacity, freespace, uncommitted int64, maintenance string) map[string]interface{} {
-	return map[string]interface{}{
-		"accessible":       accessible,
-		"capacity":         capacity,
-		"freespace":        freespace,
-		"maintenance_mode": maintenance,
-		"uncommitted":      uncommitted,
-	}
+func setDsFields(
+	fields map[string]interface{},
+	accessible bool, capacity, freespace, uncommitted int64, maintenance string,
+) {
+	fields["accessible"] = accessible
+	fields["capacity"] = capacity
+	fields["freespace"] = freespace
+	fields["maintenance_mode"] = maintenance
+	fields["uncommitted"] = uncommitted
 }
