@@ -222,7 +222,9 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 
 	// selfmonitoring
 	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
-	vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
+	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
+		vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
+	}
 	for _, m := range selfstat.Metrics() {
 		if m.Name() != "internal_agent" {
 			acc.AddMetric(m)
