@@ -67,7 +67,7 @@ You can optionally tell vcstat the input's interval by adding -poll_interval the
 ```
 ## Gather vSphere vCenter status and basic stats
 [[inputs.execd]]
-  intervel = "30s"
+  interval = "30s"
   command = ["/path/to/vcstat_binary", "-config", "/path/to/vcstat.conf", "-poll_interval", "30s"]
   signal = "none"
 ```
