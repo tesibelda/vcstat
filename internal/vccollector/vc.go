@@ -13,6 +13,8 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/tesibelda/vcstat/pkg/govplus"
+
+	"github.com/vmware/govmomi/vim25"
 )
 
 // CollectVcenterInfo gathers basic vcenter info
@@ -20,43 +22,33 @@ func (c *VcCollector) CollectVcenterInfo(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 ) error {
+	var (
+		vctags   = make(map[string]string)
+		vcfields = make(map[string]interface{})
+		cli      *vim25.Client
+		t        time.Time
+		err      error
+	)
+
 	if c.client == nil {
 		return fmt.Errorf("Could not get vcenter info: %w", govplus.ErrorNoClient)
 	}
-	cli := c.client.Client
+	cli = c.client.Client
 
-	if err := c.getDatacenters(ctx); err != nil {
+	if err = c.getDatacenters(ctx); err != nil {
 		return err
 	}
+	t = time.Now()
 
-	vctags := getVcenterTags(cli.URL().Host)
-	vcfields := getVcenterFields(
-		cli.ServiceContent.About.Version,
-		string(cli.ServiceContent.About.Build),
-		cli.ServiceContent.About.Name,
-		cli.ServiceContent.About.OsType,
-		len(c.dcs),
-	)
-	acc.AddFields("vcstat_vcenter", vcfields, vctags, time.Now())
+	vctags["vcenter"] = cli.URL().Host
+
+	vcfields["build"] = string(cli.ServiceContent.About.Build)
+	vcfields["name"] = cli.ServiceContent.About.Name
+	vcfields["num_datacenters"] = len(c.dcs)
+	vcfields["ostype"] = cli.ServiceContent.About.OsType
+	vcfields["version"] = cli.ServiceContent.About.Version
+
+	acc.AddFields("vcstat_vcenter", vcfields, vctags, t)
 
 	return nil
-}
-
-func getVcenterTags(vcenter string) map[string]string {
-	return map[string]string{
-		"vcenter": vcenter,
-	}
-}
-
-func getVcenterFields(
-	version, build, name, ostype string,
-	numdcs int,
-) map[string]interface{} {
-	return map[string]interface{}{
-		"build":           build,
-		"name":            name,
-		"num_datacenters": numdcs,
-		"ostype":          ostype,
-		"version":         version,
-	}
 }

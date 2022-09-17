@@ -73,7 +73,6 @@ func (c *VcCollector) CollectClusterInfo(
 						clMo.Name,
 					)
 				}
-				t = time.Now()
 
 				cltags["dcname"] = dc.Name()
 				cltags["clustername"] = clMo.Name
