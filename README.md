@@ -25,6 +25,8 @@ Use telegraf v1.14 or above so that execd input is available.
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
+  ## Max number of objects to gather per query
+  # query_bulk_size = 100
   ## number of intervals to skip esxcli commands for not responding hosts
   # intervals_skip_notresponding_esxcli_hosts = 20
 

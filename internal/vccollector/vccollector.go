@@ -1,7 +1,7 @@
 // vccollector package allows you to gather basic stats from VMware vCenter using govmomi
 //
-//  Use NewVCCollector method to create a new struct, Open to open a session with a vCenter
-// then use Collect* methods to get metrics added to a telegraf accumulator and finally
+//  Use New method to create a new struct, Open to open a session with a vCenter and then
+// use Collect* methods to get metrics added to a telegraf accumulator and finally
 // Close when finished.
 //
 // Author: Tesifonte Belda
@@ -19,6 +19,7 @@ import (
 	"github.com/tesibelda/vcstat/pkg/govplus"
 
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
@@ -28,13 +29,15 @@ type VcCollector struct {
 	urlString           string
 	url                 *url.URL
 	client              *govmomi.Client
+	coll                *property.Collector
 	dataDuration        time.Duration
 	skipNotRespondigFor time.Duration
+	queryBulkSize       int
 	VcCache
 }
 
-// NewVCCollector returns a new VcCollector associated with the provided vCenter URL
-func NewVCCollector(
+// New returns a new VcCollector associated with the provided vCenter URL
+func New(
 	ctx context.Context,
 	vcenterUrl, user, pass string,
 	clicfg *tls.ClientConfig,
@@ -58,15 +61,18 @@ func NewVCCollector(
 }
 
 // SetDataDuration sets max cache data duration
-func (c *VcCollector) SetDataDuration(du time.Duration) error {
+func (c *VcCollector) SetDataDuration(du time.Duration) {
 	c.dataDuration = du
-	return nil
+}
+
+// SetQueryChunkSize sets chunk size of slice to use in sSphere property queries
+func (c *VcCollector) SetQueryChunkSize(b int) {
+	c.queryBulkSize = b
 }
 
 // SetSkipHostNotRespondingDuration sets time to skip not responding to esxcli commands hosts
-func (c *VcCollector) SetSkipHostNotRespondingDuration(du time.Duration) error {
+func (c *VcCollector) SetSkipHostNotRespondingDuration(du time.Duration) {
 	c.skipNotRespondigFor = du
-	return nil
 }
 
 // Open opens a vCenter connection session or relogin if session already exists
@@ -84,6 +90,9 @@ func (c *VcCollector) Open(ctx context.Context, timeout time.Duration) error {
 		c.Close(ctx)
 	}
 	c.client, err = govplus.NewClient(ctx1, c.url, &c.ClientConfig)
+	if err == nil {
+		c.coll = property.DefaultCollector(c.client.Client)
+	}
 
 	return err
 }
@@ -96,8 +105,9 @@ func (c *VcCollector) IsActive(ctx context.Context) bool {
 // Close closes vCenter connection
 func (c *VcCollector) Close(ctx context.Context) {
 	if c.client != nil {
+		_ = c.coll.Destroy(ctx) //nolint: destroy and forget old collector
 		govplus.CloseClient(ctx, c.client)
-		c.client = nil
+		c.client, c.coll = nil, nil
 	}
 }
 
@@ -115,4 +125,29 @@ func entityStatusCode(status types.ManagedEntityStatus) int16 {
 	default:
 		return 1
 	}
+}
+
+// chuckMoRefSlice returns a list of lists segregating a list of oManagedObjectReference
+//   into chunks with a size of chunkSize
+func chunckMoRefSlice(
+	fList []types.ManagedObjectReference,
+	chunkSize int,
+) [][]types.ManagedObjectReference {
+	var (
+		chunks          [][]types.ManagedObjectReference
+		listLen, end, i int
+	)
+
+	listLen = len(fList)
+
+	for ; i < listLen; i += chunkSize {
+		end = i + chunkSize
+		if end > listLen {
+			end = listLen
+		}
+
+		chunks = append(chunks, fList[i:end])
+	}
+
+	return chunks
 }

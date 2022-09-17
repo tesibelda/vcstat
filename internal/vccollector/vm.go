@@ -25,19 +25,21 @@ func (c *VcCollector) CollectVmsInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		vmMo                  mo.VirtualMachine
-		err                   error
-		exit                  bool
-		vmtags                map[string]string
-		vmfields              map[string]interface{}
+		vmtags                = make(map[string]string)
+		vmfields              = make(map[string]interface{})
+		vmMos                 []mo.VirtualMachine
+		arefs                 []types.ManagedObjectReference
 		host                  *object.HostSystem
 		s                     *types.VirtualMachineSummary
 		r                     *types.VirtualMachineRuntimeInfo
-		t                     *types.VirtualMachineConfigSummary
+		k                     *types.VirtualMachineConfigSummary
+		t                     time.Time
 		hostname, clustername string
+		err                   error
+		exit                  bool
 	)
 
-	if c.client == nil {
+	if c.client == nil || c.coll == nil {
 		return fmt.Errorf("Could not get VMs info: %w", govplus.ErrorNoClient)
 	}
 
@@ -45,114 +47,66 @@ func (c *VcCollector) CollectVmsInfo(
 		return fmt.Errorf("Could not get virtual machine entity list: %w", err)
 	}
 
-	// reserve map memory for tags and fields according to setVmTags and setVmFields
-	vmtags = make(map[string]string, 7)
-	vmfields = make(map[string]interface{}, 14)
-
 	for i, dc := range c.dcs {
+		// get VM references and split the list into chunks
 		for _, vm := range c.vms[i] {
-			err = vm.Properties(ctx, vm.Reference(), []string{"summary"}, &vmMo)
+			arefs = append(arefs, vm.Reference())
+		}
+		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
+
+		for _, refs := range chunks {
+			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &vmMos)
 			if err != nil {
 				if err, exit = govplus.IsHardQueryError(err); exit {
-					return fmt.Errorf(
-						"Could not get vm %s summary property: %w",
-						vm.Name(),
-						err,
-					)
+					return fmt.Errorf("Could not get vm list summary property: %w", err)
 				}
 				acc.AddError(
-					fmt.Errorf(
-						"Could not get vm %s summary property: %w",
-						vm.Name(),
-						err,
-					),
+					fmt.Errorf("Could not get vm list summary property: %w", err),
 				)
 				continue
 			}
-			s = &vmMo.Summary
-			r = &s.Runtime
-			t = &s.Config
-			hostname = ""
-			clustername = ""
-			if host = c.getHostObjectFromReference(i, r.Host); host != nil {
-				hostname = host.Name()
-				clustername = c.getClusternameFromHost(i, host)
-			}
+			t = time.Now()
 
-			setVmTags(
-				vmtags,
-				c.client.Client.URL().Host,
-				dc.Name(),
-				clustername,
-				hostname,
-				vm.Reference().Value,
-				t.Name,
-				s.Guest.HostName,
-			)
-			setVmFields(
-				vmfields,
-				string(s.OverallStatus),
-				entityStatusCode(s.OverallStatus),
-				string(r.ConnectionState),
-				vmConnectionStateCode(string(r.ConnectionState)),
-				string(r.PowerState),
-				vmPowerStateCode(string(r.PowerState)),
-				r.MaxCpuUsage,
-				int64(r.MaxMemoryUsage)*(1024*1024),
-				int64(s.Config.MemorySizeMB)*(1024*1024),
-				s.Config.NumCpu,
-				t.NumEthernetCards,
-				t.NumVirtualDisks,
-				t.Template,
-				*(r.ConsolidationNeeded),
-			)
-			acc.AddFields("vcstat_vm", vmfields, vmtags, time.Now())
+			for _, vm := range vmMos {
+				s = &vm.Summary
+				r = &s.Runtime
+				k = &s.Config
+				hostname = ""
+				clustername = ""
+				if host = c.getHostObjectFromReference(i, r.Host); host != nil {
+					hostname = host.Name()
+					clustername = c.getClusternameFromHost(i, host)
+				}
+
+				vmtags["clustername"] = clustername
+				vmtags["dcname"] = dc.Name()
+				vmtags["esxhostname"] = hostname
+				vmtags["guesthostname"] = s.Guest.HostName
+				vmtags["moid"] = vm.Self.Reference().Value
+				vmtags["vcenter"] = c.client.Client.URL().Host
+				vmtags["vmname"] = k.Name
+
+				vmfields["connection_state"] = string(r.ConnectionState)
+				vmfields["connection_state_code"] = vmConnectionStateCode(string(r.ConnectionState))
+				vmfields["consolidation_needed"] = *(r.ConsolidationNeeded)
+				vmfields["max_cpu_usage"] = r.MaxCpuUsage
+				vmfields["max_mem_usage"] = int64(r.MaxMemoryUsage) * (1024 * 1024)
+				vmfields["memory_size"] = int64(s.Config.MemorySizeMB) * (1024 * 1024)
+				vmfields["num_eth_cards"] = k.NumEthernetCards
+				vmfields["num_vdisks"] = k.NumVirtualDisks
+				vmfields["num_vcpus"] = s.Config.NumCpu
+				vmfields["power_state"] = string(r.PowerState)
+				vmfields["power_state_code"] = vmPowerStateCode(string(r.PowerState))
+				vmfields["status"] = string(s.OverallStatus)
+				vmfields["status_code"] = entityStatusCode(s.OverallStatus)
+				vmfields["template"] = k.Template
+
+				acc.AddFields("vcstat_vm", vmfields, vmtags, t)
+			}
 		}
 	}
 
 	return nil
-}
-
-func setVmTags(
-	tags map[string]string,
-	vcenter, dcname, cluster, hostname, moid, vmname, guesthostname string,
-) {
-	tags["clustername"] = cluster
-	tags["dcname"] = dcname
-	tags["esxhostname"] = hostname
-	tags["guesthostname"] = guesthostname
-	tags["moid"] = moid
-	tags["vcenter"] = vcenter
-	tags["vmname"] = vmname
-}
-
-func setVmFields(
-	fields map[string]interface{},
-	overallstatus string,
-	vmstatuscode int16,
-	connectionstate string,
-	connectioncode int16,
-	powerstate string,
-	powerstatecode int16,
-	maxcpu int32,
-	maxmemory, memorysize int64,
-	numcpu, numeth, numvdisk int32,
-	template, consolidationneeded bool,
-) {
-	fields["connection_state"] = connectionstate
-	fields["connection_state_code"] = connectioncode
-	fields["consolidation_needed"] = consolidationneeded
-	fields["max_cpu_usage"] = maxcpu
-	fields["max_mem_usage"] = maxmemory
-	fields["memory_size"] = memorysize
-	fields["num_eth_cards"] = numeth
-	fields["num_vdisks"] = numvdisk
-	fields["num_vcpus"] = numcpu
-	fields["power_state"] = powerstate
-	fields["power_state_code"] = powerstatecode
-	fields["status"] = overallstatus
-	fields["status_code"] = vmstatuscode
-	fields["template"] = template
 }
 
 // vmPowerStateCode converts VM PowerStateCode to int16 for easy alerting

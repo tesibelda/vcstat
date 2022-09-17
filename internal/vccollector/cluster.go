@@ -14,7 +14,6 @@ import (
 
 	"github.com/tesibelda/vcstat/pkg/govplus"
 
-	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -25,105 +24,84 @@ func (c *VcCollector) CollectClusterInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		clMo        mo.ClusterComputeResource
-		cltags      map[string]string
-		clfields    map[string]interface{}
-		clusters    []*object.ClusterComputeResource
+		cltags      = make(map[string]string)
+		clfields    = make(map[string]interface{})
+		clMos       []mo.ClusterComputeResource
+		arefs       []types.ManagedObjectReference
 		resourceSum *(types.ClusterComputeResourceSummary)
 		usageSum    *(types.ClusterUsageSummary)
+		t           time.Time
 		numVms      int32
 		err         error
 	)
 
-	if c.client == nil {
+	if c.client == nil || c.coll == nil {
 		return fmt.Errorf("Could not get clusters info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 
-	// reserve map memory for tags and fields according to setClusterTags and setClusterFields
-	cltags = make(map[string]string, 4)
-	clfields = make(map[string]interface{}, 11)
-
 	for i, dc := range c.dcs {
-		clusters = c.clusters[i]
-		for _, cluster := range clusters {
-			err = cluster.Properties(ctx, cluster.Reference(), []string{"summary"}, &clMo)
+		// get cluster references and split the list into chunks
+		for _, cluster := range c.clusters[i] {
+			arefs = append(arefs, cluster.Reference())
+		}
+		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
+
+		for _, refs := range chunks {
+			err = c.coll.Retrieve(ctx, refs, []string{"name","summary"}, &clMos)
 			if err != nil {
-				return fmt.Errorf(
-					"Could not get cluster %s summary property: %w",
-					cluster.Name(),
-					err,
+				if err, exit := govplus.IsHardQueryError(err); exit {
+					return err
+				}
+				acc.AddError(
+					fmt.Errorf(
+						"Could not retrieve summary for cluster reference list: %w",
+						err,
+					),
 				)
+				continue
 			}
-			if resourceSum = clMo.Summary.(*types.ClusterComputeResourceSummary); resourceSum == nil {
-				return fmt.Errorf("Could not get cluster resource summary")
-			}
+			t = time.Now()
 
-			// get number of VMs in the cluster (tip: https://github.com/vmware/govmomi/issues/1247)
-			numVms = 0
-			usageSum = resourceSum.UsageSummary
-			if usageSum != nil {
-				numVms = usageSum.TotalVmCount
-			}
+			for _, clMo := range clMos {
+				resourceSum = clMo.Summary.(*types.ClusterComputeResourceSummary)
+				if resourceSum == nil {
+					return fmt.Errorf(
+						"Could not get cluster resource summary for %s",
+						clMo.Name,
+					)
+				}
+				t = time.Now()
 
-			setClusterTags(
-				cltags,
-				c.client.Client.URL().Host,
-				dc.Name(),
-				cluster.Name(),
-				cluster.Reference().Value,
-			)
-			setClusterFields(
-				clfields,
-				string(resourceSum.OverallStatus),
-				entityStatusCode(resourceSum.OverallStatus),
-				resourceSum.NumHosts,
-				resourceSum.NumEffectiveHosts,
-				resourceSum.NumCpuCores,
-				resourceSum.NumCpuThreads,
-				int64(resourceSum.TotalCpu),
-				resourceSum.TotalMemory,
-				int64(resourceSum.EffectiveCpu),
-				resourceSum.EffectiveMemory,
-				numVms,
-			)
-			acc.AddFields("vcstat_cluster", clfields, cltags, time.Now())
+				cltags["dcname"] = dc.Name()
+				cltags["clustername"] = clMo.Name
+				cltags["moid"] = clMo.Self.Reference().Value
+				cltags["vcenter"] = c.client.Client.URL().Host
+
+				// get number of VMs in the cluster
+				// (ref: https://github.com/vmware/govmomi/issues/1247)
+				numVms = 0
+				if usageSum = resourceSum.UsageSummary; usageSum != nil {
+					numVms = usageSum.TotalVmCount
+				}
+				clfields["effective_cpu"] = int64(resourceSum.EffectiveCpu)
+				clfields["effective_memory"] = resourceSum.EffectiveMemory
+				clfields["num_cpu_cores"] = resourceSum.NumCpuCores
+				clfields["num_cpu_threads"] = resourceSum.NumCpuThreads
+				clfields["num_effective_hosts"] = resourceSum.NumEffectiveHosts
+				clfields["num_vms"] = numVms
+				clfields["num_hosts"] = resourceSum.NumHosts
+				clfields["status"] = string(resourceSum.OverallStatus)
+				clfields["status_code"] = entityStatusCode(resourceSum.OverallStatus)
+				clfields["total_cpu"] = int64(resourceSum.TotalCpu)
+				clfields["total_memory"] = resourceSum.TotalMemory
+
+				acc.AddFields("vcstat_cluster", clfields, cltags, t)
+			}
 		}
 	}
 
 	return nil
-}
-
-func setClusterTags(
-	tags map[string]string,
-	vcenter, dcname, clustername, moid string,
-) {
-	tags["dcname"] = dcname
-	tags["clustername"] = clustername
-	tags["moid"] = moid
-	tags["vcenter"] = vcenter
-}
-
-func setClusterFields(
-	fields map[string]interface{},
-	overallstatus string,
-	clusterstatuscode int16,
-	numhosts, numeffectivehosts int32,
-	numcpucores, numcputhreads int16,
-	totalcpu, totalmemory, effectivecpu, effectivememory int64,
-	numvms int32,
-) {
-	fields["effective_cpu"] = effectivecpu
-	fields["effective_memory"] = effectivememory
-	fields["num_cpu_cores"] = numcpucores
-	fields["num_cpu_threads"] = numcputhreads
-	fields["num_effective_hosts"] = numeffectivehosts
-	fields["num_vms"] = numvms
-	fields["num_hosts"] = numhosts
-	fields["status"] = overallstatus
-	fields["status_code"] = clusterstatuscode
-	fields["total_cpu"] = totalcpu
-	fields["total_memory"] = totalmemory
 }

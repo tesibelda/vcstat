@@ -29,6 +29,7 @@ type VCstatConfig struct {
 	Password            string `toml:"password"`
 	Timeout             config.Duration
 	IntSkipNotRespondig int16           `toml:"intervals_skip_notresponding_esxcli_hosts"`
+	QueryBulkSize		int             `toml:"query_bulk_size"`
 	Log                 telegraf.Logger `toml:"-"`
 
 	ClusterInstances   bool `toml:"cluster_instances"`
@@ -58,6 +59,8 @@ var sampleConfig = `
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
+  ## Max number of objects to gather per query
+  # query_bulk_size = 100
   ## number of intervals to skip esxcli commands for not responding hosts
   # intervals_skip_notresponding_esxcli_hosts = 20
 
@@ -95,6 +98,7 @@ func init() {
 			Username:            "user@corp.local",
 			Password:            "secret",
 			Timeout:             config.Duration(time.Second * 0),
+			QueryBulkSize:		 100,
 			IntSkipNotRespondig: 20,
 			ClusterInstances:    true,
 			DatastoreInstances:  false,
@@ -118,7 +122,7 @@ func (vcs *VCstatConfig) Init() error {
 	if vcs.vcc != nil {
 		vcs.vcc.Close(vcs.ctx)
 	}
-	vcs.vcc, err = vccollector.NewVCCollector(
+	vcs.vcc, err = vccollector.New(
 		vcs.ctx,
 		vcs.VCenter,
 		vcs.Username,
@@ -130,12 +134,13 @@ func (vcs *VCstatConfig) Init() error {
 		return err
 	}
 
-	// Set vccollector dataduration as half of the telegraf shim polling interval
-	_ = vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
-	// Set vccollector duration to skip not responding hosts to esxcli commands
-	_ = vcs.vcc.SetSkipHostNotRespondingDuration(
+	// Set vccollector options
+	//   dataduration as half of the telegraf shim polling interval
+	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
+	vcs.vcc.SetSkipHostNotRespondingDuration(
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
 	)
+	vcs.vcc.SetQueryChunkSize(vcs.QueryBulkSize)
 
 	// selfmonitoring
 	u, err := url.Parse(vcs.VCenter)

@@ -14,7 +14,6 @@ import (
 
 	"github.com/tesibelda/vcstat/pkg/govplus"
 
-	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -26,81 +25,58 @@ func (c *VcCollector) CollectDatastoresInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		dstags   map[string]string
-		dsfields map[string]interface{}
-		refs     []types.ManagedObjectReference
-		dsMo     []mo.Datastore
+		dstags   = make(map[string]string)
+		dsfields = make(map[string]interface{})
+		dsMos    []mo.Datastore
+		arefs    []types.ManagedObjectReference
+		t        time.Time
 		err      error
 	)
 
-	if c.client == nil {
+	if c.client == nil || c.coll == nil {
 		return fmt.Errorf("Could not get datastores info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersDatastores(ctx); err != nil {
 		return fmt.Errorf("Could not get datastore entity list: %w", err)
 	}
 
-	// reserve map memory for tags and fields according to setDsTags and setDsFields
-	dstags = make(map[string]string, 5)
-	dsfields = make(map[string]interface{}, 5)
-
-	pc := property.DefaultCollector(c.client.Client)
-
 	for i, dc := range c.dcs {
-		refs = nil
+		// get DS references and split the list into chunks
 		for _, ds := range c.dss[i] {
-			refs = append(refs, ds.Reference())
+			arefs = append(arefs, ds.Reference())
 		}
-		err = pc.Retrieve(ctx, refs, []string{"summary"}, &dsMo)
-		if err != nil {
-			if err, exit := govplus.IsHardQueryError(err); exit {
-				return err
+		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
+
+		for _, refs := range chunks {
+			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &dsMos)
+			if err != nil {
+				if err, exit := govplus.IsHardQueryError(err); exit {
+					return err
+				}
+				acc.AddError(
+					fmt.Errorf("Could not retrieve summary for datastore reference list: %w", err),
+				)
+				continue
 			}
-			acc.AddError(fmt.Errorf("Could not retrieve summary for datastore: %w", err))
-			continue
-		}
-		for _, ds := range dsMo {
-			setDsTags(
-				dstags,
-				c.client.Client.URL().Host,
-				dc.Name(),
-				ds.Summary.Name,
-				ds.Reference().Value,
-				ds.Summary.Type,
-			)
-			setDsFields(
-				dsfields,
-				ds.Summary.Accessible,
-				ds.Summary.Capacity,
-				ds.Summary.FreeSpace,
-				ds.Summary.Uncommitted,
-				ds.Summary.MaintenanceMode,
-			)
-			acc.AddFields("vcstat_datastore", dsfields, dstags, time.Now())
+			t = time.Now()
+
+			for _, ds := range dsMos {
+				dstags["dcname"] = dc.Name()
+				dstags["dsname"] = ds.Summary.Name
+				dstags["moid"] = ds.Self.Reference().Value
+				dstags["type"] = ds.Summary.Type
+				dstags["vcenter"] = c.client.Client.URL().Host
+
+				dsfields["accessible"] = ds.Summary.Accessible
+				dsfields["capacity"] = ds.Summary.Capacity
+				dsfields["freespace"] = ds.Summary.FreeSpace
+				dsfields["maintenance_mode"] = ds.Summary.Uncommitted
+				dsfields["uncommitted"] = ds.Summary.MaintenanceMode
+
+				acc.AddFields("vcstat_datastore", dsfields, dstags, t)
+			}
 		}
 	}
 
 	return nil
-}
-
-func setDsTags(
-	tags map[string]string,
-	vcenter, dcname, dsname, moid, dstype string,
-) {
-	tags["dcname"] = dcname
-	tags["dsname"] = dsname
-	tags["moid"] = moid
-	tags["type"] = dstype
-	tags["vcenter"] = vcenter
-}
-
-func setDsFields(
-	fields map[string]interface{},
-	accessible bool, capacity, freespace, uncommitted int64, maintenance string,
-) {
-	fields["accessible"] = accessible
-	fields["capacity"] = capacity
-	fields["freespace"] = freespace
-	fields["maintenance_mode"] = maintenance
-	fields["uncommitted"] = uncommitted
 }

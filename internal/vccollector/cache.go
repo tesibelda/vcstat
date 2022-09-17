@@ -231,6 +231,18 @@ func (c *VcCollector) IsHostConnected(dc *object.Datacenter, host *object.HostSy
 	return false
 }
 
+func (c *VcCollector) getHostState(dcindex int, name string) *hostState {
+	if len(c.hostStates) <= dcindex || len(c.hosts) <= dcindex {
+		return nil
+	}
+	for j, host := range c.hosts[dcindex] {
+		if host.Name() == name {
+			return &(c.hostStates[dcindex][j])
+		}
+	}
+	return nil
+}
+
 func (c *VcCollector) getHostStateIdx(dcindex, hostindex int) *hostState {
 	if len(c.hostStates) <= dcindex || len(c.hostStates[dcindex]) <= hostindex {
 		return nil

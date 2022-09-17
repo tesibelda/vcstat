@@ -21,8 +21,9 @@ func (c *VcCollector) CollectDatacenterInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		dctags   map[string]string
-		dcfields map[string]interface{}
+		dctags   = make(map[string]string)
+		dcfields = make(map[string]interface{})
+		t        time.Time
 		err      error
 	)
 
@@ -33,26 +34,19 @@ func (c *VcCollector) CollectDatacenterInfo(
 	if err = c.getAllDatacentersEntities(ctx); err != nil {
 		return fmt.Errorf("Could not get all datacenters entity lists: %w", err)
 	}
-
-	// reserve map memory for tags and fields according to setDcTags and setDcFields
-	dctags = make(map[string]string, 3)
-	dcfields = make(map[string]interface{}, 4)
+	t = time.Now()
 
 	for i, dc := range c.dcs {
-		setDcTags(
-			dctags,
-			c.client.Client.URL().Host,
-			dc.Name(),
-			dc.Reference().Value,
-		)
-		setDcFields(
-			dcfields,
-			len(c.clusters[i]),
-			len(c.hosts[i]),
-			len(c.dss[i]),
-			len(c.nets[i]),
-		)
-		acc.AddFields("vcstat_datacenter", dcfields, dctags, time.Now())
+		dctags["dcname"] = dc.Name()
+		dctags["moid"] = dc.Reference().Value
+		dctags["vcenter"] = c.client.Client.URL().Host
+
+		dcfields["num_clusters"] = len(c.clusters[i])
+		dcfields["num_datastores"] = len(c.dss[i])
+		dcfields["num_hosts"] = len(c.hosts[i])
+		dcfields["num_networks"] = len(c.nets[i])
+
+		acc.AddFields("vcstat_datacenter", dcfields, dctags, t)
 	}
 
 	return err
@@ -75,23 +69,4 @@ func (c *VcCollector) getAllDatacentersEntities(ctx context.Context) error {
 	}
 
 	return err
-}
-
-func setDcTags(
-	tags map[string]string,
-	vcenter, dcname, moid string,
-) {
-	tags["dcname"] = dcname
-	tags["moid"] = moid
-	tags["vcenter"] = vcenter
-}
-
-func setDcFields(
-	fields map[string]interface{},
-	clusters, hosts, datastores, networks int,
-) {
-	fields["num_clusters"] = clusters
-	fields["num_datastores"] = datastores
-	fields["num_hosts"] = hosts
-	fields["num_networks"] = networks
 }

@@ -28,83 +28,86 @@ func (c *VcCollector) CollectHostInfo(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hstags                   map[string]string
-		hsfields                 map[string]interface{}
-		hsMo                     mo.HostSystem
-		err                      error
-		hostSt                   *hostState
-		s                        *(types.HostListSummary)
-		r                        *(types.HostRuntimeInfo)
-		h                        *(types.HostHardwareSummary)
-		hsCode, hsConnectionCode int16
-		exit                     bool
+		hstags             = make(map[string]string)
+		hsfields           = make(map[string]interface{})
+		hsref              types.ManagedObjectReference
+		hsMos              []mo.HostSystem
+		arefs              []types.ManagedObjectReference
+		host               *object.HostSystem
+		hostSt             *hostState
+		s                  *(types.HostListSummary)
+		r                  *(types.HostRuntimeInfo)
+		h                  *(types.HostHardwareSummary)
+		t                  time.Time
+		err                error
+		hsCode, hsConnCode int16
 	)
 
-	if c.client == nil {
+	if c.client == nil || c.coll == nil {
 		return fmt.Errorf("Could not get host info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
 
-	// reserve map memory for tags and fields according to setHostTags and setHostFields
-	hstags = make(map[string]string, 5)
-	hsfields = make(map[string]interface{}, 9)
-
 	for i, dc := range c.dcs {
+		// get Host references and split the list into chunks
 		for j, host := range c.hosts[i] {
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
-			err = host.Properties(ctx, host.Reference(), []string{"summary"}, &hsMo)
+			arefs = append(arefs, host.Reference())
+		}
+		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
+
+		for _, refs := range chunks {
+			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary"}, &hsMos)
 			if err != nil {
-				if err, exit = govplus.IsHardQueryError(err); exit {
-					return fmt.Errorf(
-						"Could not get host %s summary property: %w",
-						host.Name(),
-						err,
-					)
+				if err, exit := govplus.IsHardQueryError(err); exit {
+					return err
 				}
 				acc.AddError(
-					fmt.Errorf(
-						"Could not get host %s summary property: %w",
-						host.Name(),
-						err,
-					),
+					fmt.Errorf("Could not retrieve summary for host reference list: %w", err),
 				)
 				continue
 			}
-			s = &hsMo.Summary
-			r = s.Runtime
-			h = s.Hardware
-			hostSt.setNotConnected(
-				r.ConnectionState != types.HostSystemConnectionStateConnected,
-			)
-			hsCode = entityStatusCode(s.OverallStatus)
-			hsConnectionCode = hostConnectionStateCode(r.ConnectionState)
+			t = time.Now()
 
-			setHostTags(
-				hstags,
-				c.client.Client.URL().Host,
-				dc.Name(),
-				c.getClusternameFromHost(i, host),
-				host.Name(),
-				host.Reference().Value,
-			)
-			setHostFields(
-				hsfields,
-				string(s.OverallStatus),
-				hsCode,
-				s.RebootRequired,
-				r.InMaintenanceMode,
-				string(r.ConnectionState),
-				hsConnectionCode,
-				h.MemorySize,
-				h.NumCpuCores,
-				h.CpuMhz,
-			)
-			acc.AddFields("vcstat_host", hsfields, hstags, time.Now())
+			for _, hsMo := range hsMos {
+				s = &hsMo.Summary
+				r = s.Runtime
+				h = s.Hardware
+				if hostSt = c.getHostState(i, hsMo.Name); hostSt == nil {
+					acc.AddError(fmt.Errorf("Could not find host state for %s", hsMo.Name))
+					continue
+				}
+
+				hsref = hsMo.Self.Reference()
+				host = c.getHostObjectFromReference(i, &hsref)
+				hstags["clustername"] = c.getClusternameFromHost(i, host)
+				hstags["dcname"] = dc.Name()
+				hstags["esxhostname"] = hsMo.Name
+				hstags["moid"] = hsMo.Self.Reference().Value
+				hstags["vcenter"] = c.client.Client.URL().Host
+
+				hostSt.setNotConnected(
+					r.ConnectionState != types.HostSystemConnectionStateConnected,
+				)
+				hsCode = entityStatusCode(s.OverallStatus)
+				hsConnCode = hostConnectionStateCode(r.ConnectionState)
+				hsfields["connection_state"] = string(r.ConnectionState)
+				hsfields["connection_state_code"] = hsConnCode
+				hsfields["in_maintenance_mode"] = r.InMaintenanceMode
+				hsfields["reboot_required"] = s.RebootRequired
+				hsfields["status"] = string(s.OverallStatus)
+				hsfields["status_code"] = hsCode
+				hsfields["memory_size"] = h.MemorySize
+				hsfields["num_cpus"] = h.NumCpuCores
+				hsfields["cpu_freq"] = h.CpuMhz
+
+				acc.AddFields("vcstat_host", hsfields, hstags, t)
+			}
 		}
 	}
 
@@ -117,13 +120,13 @@ func (c *VcCollector) CollectHostHBA(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hbatags   map[string]string
-		hbafields map[string]interface{}
-		startTime time.Time
-		err       error
-		x         *esxcli.Executor
-		res       *esxcli.Response
-		hostSt    *hostState
+		hbatags      = make(map[string]string)
+		hbafields    = make(map[string]interface{})
+		x            *esxcli.Executor
+		res          *esxcli.Response
+		hostSt       *hostState
+		startTime, t time.Time
+		err          error
 	)
 
 	if c.client == nil {
@@ -132,10 +135,6 @@ func (c *VcCollector) CollectHostHBA(
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
-
-	// reserve map memory for tags and fields according to setHbaTags and setHbaFields
-	hbatags = make(map[string]string, 6)
-	hbafields = make(map[string]interface{}, 2)
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
@@ -173,6 +172,7 @@ func (c *VcCollector) CollectHostHBA(
 				hostSt.setNotResponding(true)
 				continue
 			}
+			t = time.Now()
 
 			if len(res.Values) > 0 {
 				var keys []string
@@ -181,21 +181,17 @@ func (c *VcCollector) CollectHostHBA(
 				}
 				for _, rv := range res.Values {
 					if len(rv) > 0 && len(rv["LinkState"]) > 0 {
-						setHbaTags(
-							hbatags,
-							c.client.Client.URL().Host,
-							dc.Name(),
-							c.getClusternameFromHost(i, host),
-							host.Name(),
-							rv["HBAName"][0],
-							rv["Driver"][0],
-						)
-						setHbaFields(
-							hbafields,
-							rv["LinkState"][0],
-							hbaLinkStateCode(rv["LinkState"][0]),
-						)
-						acc.AddFields("vcstat_host_hba", hbafields, hbatags, time.Now())
+						hbatags["clustername"] = c.getClusternameFromHost(i, host)
+						hbatags["dcname"] = dc.Name()
+						hbatags["device"] = rv["HBAName"][0]
+						hbatags["driver"] = rv["Driver"][0]
+						hbatags["esxhostname"] = host.Name()
+						hbatags["vcenter"] = c.client.Client.URL().Host
+
+						hbafields["link_state"] = rv["LinkState"][0]
+						hbafields["link_state_code"] = hbaLinkStateCode(rv["LinkState"][0])
+
+						acc.AddFields("vcstat_host_hba", hbafields, hbatags, t)
 					}
 				}
 			}
@@ -211,13 +207,13 @@ func (c *VcCollector) CollectHostNIC(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		nictags   map[string]string
-		nicfields map[string]interface{}
-		startTime time.Time
-		err       error
-		x         *esxcli.Executor
-		res       *esxcli.Response
-		hostSt    *hostState
+		nictags      = make(map[string]string)
+		nicfields    = make(map[string]interface{})
+		x            *esxcli.Executor
+		res          *esxcli.Response
+		hostSt       *hostState
+		startTime, t time.Time
+		err          error
 	)
 
 	if c.client == nil {
@@ -226,10 +222,6 @@ func (c *VcCollector) CollectHostNIC(
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
-
-	// reserve map memory for tags and fields according to setNicTags and setNicFields
-	nictags = make(map[string]string, 6)
-	nicfields = make(map[string]interface{}, 6)
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
@@ -261,6 +253,7 @@ func (c *VcCollector) CollectHostNIC(
 				hostSt.setNotResponding(true)
 				continue
 			}
+			t = time.Now()
 
 			if len(res.Values) > 0 {
 				var keys []string
@@ -269,23 +262,21 @@ func (c *VcCollector) CollectHostNIC(
 				}
 				for _, rv := range res.Values {
 					if len(rv) > 0 && len(rv["LinkStatus"]) > 0 {
-						setNicTags(
-							nictags,
-							c.client.Client.URL().Host,
-							dc.Name(),
-							c.getClusternameFromHost(i, host),
-							host.Name(),
-							rv["Name"][0],
-							rv["Driver"][0],
-						)
-						setNicFields(
-							nicfields,
-							rv["LinkStatus"][0],
-							nicLinkStatusCode(rv["LinkStatus"][0]),
-							rv["AdminStatus"][0], rv["Duplex"][0],
-							rv["Speed"][0], rv["MACAddress"][0],
-						)
-						acc.AddFields("vcstat_host_nic", nicfields, nictags, time.Now())
+						nictags["clustername"] = c.getClusternameFromHost(i, host)
+						nictags["dcname"] = dc.Name()
+						nictags["device"] = rv["Name"][0]
+						nictags["driver"] = rv["Driver"][0]
+						nictags["esxhostname"] = host.Name()
+						nictags["vcenter"] = c.client.Client.URL().Host
+
+						nicfields["admin_status"] = rv["AdminStatus"][0]
+						nicfields["link_status"] = rv["LinkStatus"][0]
+						nicfields["link_status_code"] = nicLinkStatusCode(rv["LinkStatus"][0])
+						nicfields["duplex"] = rv["Duplex"][0]
+						nicfields["mac"] = rv["MACAddress"][0]
+						nicfields["speed"] = rv["Speed"][0]
+
+						acc.AddFields("vcstat_host_nic", nicfields, nictags, t)
 					}
 				}
 			}
@@ -301,13 +292,13 @@ func (c *VcCollector) CollectHostFw(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		fwtags    map[string]string
-		fwfields  map[string]interface{}
-		startTime time.Time
-		err       error
-		x         *esxcli.Executor
-		res       *esxcli.Response
-		hostSt    *hostState
+		fwtags       = make(map[string]string)
+		fwfields     = make(map[string]interface{})
+		x            *esxcli.Executor
+		res          *esxcli.Response
+		hostSt       *hostState
+		startTime, t time.Time
+		err          error
 	)
 
 	if c.client == nil {
@@ -316,10 +307,6 @@ func (c *VcCollector) CollectHostFw(
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
 		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
 	}
-
-	// reserve map memory for tags and fields according to setFirewallTags and setFirewallFields
-	fwtags = make(map[string]string, 3)
-	fwfields = make(map[string]interface{}, 2)
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
@@ -357,15 +344,14 @@ func (c *VcCollector) CollectHostFw(
 				hostSt.setNotResponding(true)
 				continue
 			}
+			t = time.Now()
 
 			if len(res.Values) > 0 && len(res.Values[0]["Enabled"]) > 0 {
-				setFirewallTags(
-					fwtags,
-					c.client.Client.URL().Host,
-					dc.Name(),
-					c.getClusternameFromHost(i, host),
-					host.Name(),
-				)
+				fwtags["clustername"] = c.getClusternameFromHost(i, host)
+				fwtags["dcname"] = dc.Name()
+				fwtags["esxhostname"] = host.Name()
+				fwtags["vcenter"] = c.client.Client.URL().Host
+
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
 				if err != nil {
 					acc.AddError(
@@ -388,13 +374,11 @@ func (c *VcCollector) CollectHostFw(
 					)
 					continue
 				}
-				setFirewallFields(
-					fwfields,
-					res.Values[0]["DefaultAction"][0],
-					enabled,
-					loaded,
-				)
-				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, time.Now())
+				fwfields["defaultaction"] = res.Values[0]["DefaultAction"][0]
+				fwfields["enabled"] = enabled
+				fwfields["loaded"] = loaded
+
+				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, t)
 			}
 		}
 	}
@@ -408,20 +392,14 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hstags          map[string]string
-		hsfields        map[string]interface{}
+		hstags          = make(map[string]string)
+		hsfields        = make(map[string]interface{})
 		hostSt          *hostState
+		t               time.Time
 		responding_code int
 	)
 
-	if c.client == nil {
-		return fmt.Errorf("Could not report host esxcli responses info: %w", govplus.ErrorNoClient)
-	}
-
-	// reserve map memory for tags and fields according to setHostTags and setEsxcliFields
-	hstags = make(map[string]string, 5)
-	hsfields = make(map[string]interface{}, 2)
-
+	t = time.Now()
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
@@ -429,14 +407,12 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 				continue
 			}
 
-			setHostTags(
-				hstags,
-				c.client.Client.URL().Host,
-				dc.Name(),
-				c.getClusternameFromHost(i, host),
-				host.Name(),
-				host.Reference().Value,
-			)
+			hstags["clustername"] = c.getClusternameFromHost(i, host)
+			hstags["dcname"] = dc.Name()
+			hstags["esxhostname"] = host.Name()
+			hstags["moid"] = host.Reference().Value
+			hstags["vcenter"] = c.client.Client.URL().Host
+
 			responding_code = 0
 			if !hostSt.isHostConnected() {
 				responding_code = 1
@@ -445,13 +421,10 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 					responding_code = 2
 				}
 			}
-			setEsxcliFields(
-				hsfields,
-				responding_code,
-				int(hostSt.responseTime.Nanoseconds()),
-			)
+			hsfields["responding_code"] = responding_code
+			hsfields["response_time_ns"] = int(hostSt.responseTime.Nanoseconds())
 
-			acc.AddFields("vcstat_host_esxcli", hsfields, hstags, time.Now())
+			acc.AddFields("vcstat_host_esxcli", hsfields, hstags, t)
 		}
 	}
 
@@ -481,8 +454,7 @@ func (c *VcCollector) getHostObjectFromReference(
 	return nil
 }
 
-// hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy
-//  alerting from telegraf metrics
+// hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting
 func hostConnectionStateCode(state types.HostSystemConnectionState) int16 {
 	switch state {
 	case types.HostSystemConnectionStateConnected:
@@ -496,61 +468,8 @@ func hostConnectionStateCode(state types.HostSystemConnectionState) int16 {
 	}
 }
 
-func setHostTags(
-	tags map[string]string,
-	vcenter, dcname, cluster, hostname, moid string,
-) {
-	tags["clustername"] = cluster
-	tags["dcname"] = dcname
-	tags["esxhostname"] = hostname
-	tags["moid"] = moid
-	tags["vcenter"] = vcenter
-}
-
-func setHostFields(
-	fields map[string]interface{},
-	overallstatus string,
-	hoststatuscode int16,
-	rebootrequired, inmaintenancemode bool,
-	connectionstate string,
-	connectionstatecode int16,
-	memorysize int64,
-	numcpu int16,
-	cpumhz int32,
-) {
-	fields["connection_state"] = connectionstate
-	fields["connection_state_code"] = connectionstatecode
-	fields["in_maintenance_mode"] = inmaintenancemode
-	fields["reboot_required"] = rebootrequired
-	fields["status"] = overallstatus
-	fields["status_code"] = hoststatuscode
-	fields["memory_size"] = memorysize
-	fields["num_cpus"] = numcpu
-	fields["cpu_freq"] = cpumhz
-}
-
-func setHbaTags(
-	tags map[string]string,
-	vcenter, dcname, cluster, hostname, hba, driver string,
-) {
-	tags["clustername"] = cluster
-	tags["dcname"] = dcname
-	tags["device"] = hba
-	tags["driver"] = driver
-	tags["esxhostname"] = hostname
-	tags["vcenter"] = vcenter
-}
-
-func setHbaFields(
-	fields map[string]interface{},
-	status string, statuscode int16,
-) {
-	fields["link_state"] = status
-	fields["link_state_code"] = statuscode
-}
-
 // hbaLinkStateCode converts storage adapter Link State to int16
-// for easy alerting from telegraf metrics
+// for easy alerting
 func hbaLinkStateCode(state string) int16 {
 	switch state {
 	case "link-up", "online":
@@ -566,34 +485,7 @@ func hbaLinkStateCode(state string) int16 {
 	}
 }
 
-func setNicTags(
-	tags map[string]string,
-	vcenter, dcname, cluster, hostname, nic, driver string,
-) {
-	tags["clustername"] = cluster
-	tags["dcname"] = dcname
-	tags["device"] = nic
-	tags["driver"] = driver
-	tags["esxhostname"] = hostname
-	tags["vcenter"] = vcenter
-}
-
-func setNicFields(
-	fields map[string]interface{},
-	status string,
-	statuscode int16,
-	adminstatus, duplex, speed, mac string,
-) {
-	fields["admin_status"] = adminstatus
-	fields["link_status"] = status
-	fields["link_status_code"] = statuscode
-	fields["duplex"] = duplex
-	fields["mac"] = mac
-	fields["speed"] = speed
-}
-
 // nicLinkStatusCode converts LinkStatus to int16 for easy alerting
-// from telegraf metrics
 func nicLinkStatusCode(state string) int16 {
 	switch state {
 	case "Up":
@@ -605,31 +497,4 @@ func nicLinkStatusCode(state string) int16 {
 	default:
 		return 1
 	}
-}
-
-func setFirewallTags(
-	tags map[string]string,
-	vcenter, dcname, cluster, hostname string,
-) {
-	tags["clustername"] = cluster
-	tags["dcname"] = dcname
-	tags["esxhostname"] = hostname
-	tags["vcenter"] = vcenter
-}
-
-func setFirewallFields(
-	fields map[string]interface{},
-	defaultaction string, enabled, loaded bool,
-) {
-	fields["defaultaction"] = defaultaction
-	fields["enabled"] = enabled
-	fields["loaded"] = loaded
-}
-
-func setEsxcliFields(
-	fields map[string]interface{},
-	responding_code, response_time int,
-) {
-	fields["responding_code"] = responding_code
-	fields["response_time_ns"] = response_time
 }
