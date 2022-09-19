@@ -70,8 +70,8 @@ func (c *VcCollector) CollectDatastoresInfo(
 				dsfields["accessible"] = ds.Summary.Accessible
 				dsfields["capacity"] = ds.Summary.Capacity
 				dsfields["freespace"] = ds.Summary.FreeSpace
-				dsfields["maintenance_mode"] = ds.Summary.Uncommitted
-				dsfields["uncommitted"] = ds.Summary.MaintenanceMode
+				dsfields["maintenance_mode"] = ds.Summary.MaintenanceMode
+				dsfields["uncommitted"] = ds.Summary.Uncommitted
 
 				acc.AddFields("vcstat_datastore", dsfields, dstags, t)
 			}
