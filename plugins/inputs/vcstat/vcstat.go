@@ -38,6 +38,7 @@ type VCstatConfig struct {
 	HostHBAInstances   bool `toml:"host_hba_instances"`
 	HostNICInstances   bool `toml:"host_nic_instances"`
 	HostFwInstances    bool `toml:"host_firewall_instances"`
+	HostGraphics       bool `toml:"host_graphics_instances"`
 	NetDVSInstances    bool `toml:"net_dvs_instances"`
 	NetDVPInstances    bool `toml:"net_dvp_instances"`
 	VMInstances        bool `toml:"vm_instances"`
@@ -78,6 +79,8 @@ var sampleConfig = `
   # host_instances = true
   ## collect host firewall measurement (vcstat_host_firewall)
   # host_firewall_instances = false
+  ## collect host graphics measurement (vcstat_host_graphics)
+  # host_graphics_instances = false
   ## collect host bus adapter measurement (vcstat_host_hba)
   # host_hba_instances = false
   ## collect host network interface measurement (vcstat_host_nic)
@@ -104,6 +107,7 @@ func init() {
 			DatastoreInstances:  false,
 			HostInstances:       true,
 			HostFwInstances:     false,
+			HostGraphics:        false,
 			HostHBAInstances:    false,
 			HostNICInstances:    false,
 			NetDVSInstances:     true,
@@ -227,7 +231,7 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 
 	// selfmonitoring
 	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
-	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
+	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances || vcs.HostGraphics {
 		vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
 	}
 	for _, m := range selfstat.Metrics() {
@@ -328,7 +332,13 @@ func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulato
 		}
 	}
 
-	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
+	if vcs.HostGraphics {
+		if err = col.CollectHostGraphics(ctx, acc); err != nil {
+			return err
+		}
+	}
+
+	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances || vcs.HostGraphics {
 		if err = col.ReportHostEsxcliResponse(ctx, acc); err != nil {
 			return err
 		}

@@ -86,6 +86,19 @@
 	- defaultaction (string)
 	- enabled (bool)
 	- loaded (bool)
+- vcstat_host_graphics
+  - tags:
+	- address
+	- device
+    - esxhostname
+    - vcenter
+    - dcname
+    - clustername
+  - fields:
+	- cpu
+	- driver (string)
+    - memory
+	- temperature
 - vcstat_host_hba
   - tags:
 	- device

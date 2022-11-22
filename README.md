@@ -44,6 +44,8 @@ Use telegraf v1.14 or above so that execd input is available.
   # host_instances = true
   ## collect host firewall measurement (vcstat_host_firewall)
   # host_firewall_instances = false
+  ## collect host graphics measurement (vcstat_host_graphics)
+  # host_graphics_instances = false
   ## collect host bus adapter measurement (vcstat_host_hba)
   # host_hba_instances = false
   ## collect host network interface measurement (vcstat_host_nic)
@@ -97,6 +99,8 @@ vcstat_vcenter,vcenter=vcenter.local name="VMware vCenter Server",num_datacenter
 vcstat_datacenter,dcname=MyDC,moid=datacenter-2,vcenter=vcenter.local num_datastores=51i,num_hosts=8i,num_networks=32i,num_clusters=1i 1653060681000000000
 vcstat_cluster,clustername=MyCluster-01,dcname=MyDC,moid=domain-c121,vcenter=vcenter.local num_cpu_cores=152i,total_cpu=342248i,total_memory=1648683421696i,effective_cpu=299032i,status="green",status_code=0i,num_vms=26i,num_hosts=8i,num_effective_hosts=8i,num_cpu_threads=304i,effective_memory=1502236i 1653060681000000000
 vcstat_host,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,moid=host-706,vcenter=vcenter.local connection_state_code=0i,memory_size=206110695424i,num_cpus=16i,cpu_freq=2199i,status="green",status_code=0i,reboot_required=false,in_maintenance_mode=false,connection_state="connected" 1653060681000000000
+vcstat_host_graphics,address=0000:3b:00.0,clustername=MyCluster-01,dcname=MyDC,device=NVIDIA\ A40,esxhostname=myesxi01.local,vcenter=vcenter.local memory="9",temperature="29",cpu="3",driver="510.84.01" 1653060681000000000
+vcstat_host_graphics,address=0000:a1:00.0,clustername=MyCluster-01,dcname=MyDC,device=NVIDIA\ A40,esxhostname=myesxi01.local,vcenter=vcenter.local driver="510.84.01",memory="11",temperature="28",cpu="5" 1653060681000000000
 vcstat_host_firewall,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,vcenter=vcenter.local defaultaction="DROP",enabled=true,loaded=true 1653060681000000000
 vcstat_host_hba,dcname=MyDC,clustername=MyCluster-01,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local,vcenter=vcenter.local status="link-n/a",status_code=1i 1653060681000000000
 vcstat_host_nic,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1653060681000000000
