@@ -9,6 +9,7 @@ package vccollector
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -93,9 +94,9 @@ func (c *VcCollector) CollectHostGraphics(
 						grtags["vcenter"] = c.client.Client.URL().Host
 
 						grfields["driver"] = rv["DriverVersion"][0]
-						grfields["memory"] = rv["MemoryUsed"][0]
-						grfields["temperature"] = rv["Temperature"][0]
-						grfields["cpu"] = rv["Utilization"][0]
+						grfields["memory"], _ = strconv.ParseFloat(rv["MemoryUsed"][0], 32)
+						grfields["temperature"], _ = strconv.ParseFloat(rv["Temperature"][0], 32)
+						grfields["cpu"], _ = strconv.ParseFloat(rv["Utilization"][0], 32)
 
 						acc.AddFields("vcstat_host_graphics", grfields, grtags, t)
 					}
