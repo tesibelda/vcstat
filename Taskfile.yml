@@ -8,9 +8,6 @@ vars:
   GIT_COMMIT:
     sh: git log -n 1 --format=%h
 
-  GO_PACKAGES:
-    sh: go list ./...
-
 env:
   CGO_ENABLED: '0'
 

@@ -8,7 +8,7 @@ vcstat is a VMware vSphere input plugin for [Telegraf](https://github.com/influx
 
 # Compatibility
 
-Current releases are built with a govmomi library version that supports vCenter 6.5, 6.7 and 7.0.
+Latest releases are built with a govmomi library version that supports vCenter 7.0 and 8.0 (probably also work with 6.5 and 6.7).
 Use telegraf v1.14 or above so that execd input is available. 
 
 # Configuration
