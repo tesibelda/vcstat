@@ -386,6 +386,92 @@ func (c *VcCollector) CollectHostFw(
 	return nil
 }
 
+// CollectHostServices gathers host services info (like govc: host.service.ls)
+func (c *VcCollector) CollectHostServices(
+	ctx context.Context,
+	acc telegraf.Accumulator,
+) error {
+	var (
+		hstags       = make(map[string]string)
+		hsfields     = make(map[string]interface{})
+		hsref, sref  types.ManagedObjectReference
+		hsMos        []mo.HostServiceSystem
+		hrefs, srefs []types.ManagedObjectReference
+		host         *object.HostSystem
+		s            *object.HostServiceSystem
+		hostSt       *hostState
+		t            time.Time
+		err          error
+	)
+
+	if c.client == nil || c.coll == nil {
+		return fmt.Errorf("Could not get host services info: %w", govplus.ErrorNoClient)
+	}
+	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
+		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+	}
+
+	for i, dc := range c.dcs {
+		// get HostServiceSystem references and split the list into chunks
+		for j, host := range c.hosts[i] {
+			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
+				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				continue
+			}
+			s, err = host.ConfigManager().ServiceSystem(ctx)
+			if err != nil {
+				return fmt.Errorf("Could not get host service system: %w", err)
+			}
+			hrefs = append(hrefs, host.Reference())
+			srefs = append(srefs, s.Reference())
+		}
+		chunks := chunckMoRefSlice(srefs, c.queryBulkSize)
+
+		for _, refs := range chunks {
+			err = c.coll.Retrieve(ctx, refs, []string{"serviceInfo.service"}, &hsMos)
+			if err != nil {
+				if err, exit := govplus.IsHardQueryError(err); exit {
+					return err
+				}
+				acc.AddError(
+					fmt.Errorf("Could not retrieve info for host service reference list: %w", err),
+				)
+				continue
+			}
+			t = time.Now()
+
+			for _, hsMo := range hsMos {
+				services := hsMo.ServiceInfo.Service
+
+				// find host of this service
+				sref = hsMo.Self.Reference()
+				for k, r := range srefs {
+					if r == sref {
+						hsref = hrefs[k]
+						break
+					}
+				}
+				host = c.getHostObjectFromReference(i, &hsref)
+				hstags["clustername"] = c.getClusternameFromHost(i, host)
+				hstags["dcname"] = dc.Name()
+				hstags["esxhostname"] = host.Name()
+				hstags["vcenter"] = c.client.Client.URL().Host
+
+				for _, service := range services {
+					hstags["key"] = service.Key
+					hsfields["label"] = service.Label
+					hsfields["policy"] = service.Policy
+					hsfields["required"] = service.Required
+					hsfields["running"] = service.Running
+					acc.AddFields("vcstat_host_service", hsfields, hstags, t)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // ReportHostEsxcliResponse reports metrics about host esxcli command responses
 func (c *VcCollector) ReportHostEsxcliResponse(
 	ctx context.Context,

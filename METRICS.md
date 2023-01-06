@@ -125,6 +125,18 @@
 	- duplex (string)
 	- speed (int)
 	- mac (string)
+- vcstat_host_service
+  - tags:
+	- key
+    - esxhostname
+    - vcenter
+    - dcname
+    - clustername
+  - fields:
+	- label (string)
+	- policy (string)
+	- required (boolean)
+	- running (boolean)
 - vcstat_net_dvs
   - tags:
     - dvs

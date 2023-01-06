@@ -50,6 +50,8 @@ Use telegraf v1.14 or above so that execd input is available.
   # host_hba_instances = false
   ## collect host network interface measurement (vcstat_host_nic)
   # host_nic_instances = false
+  ## collect host services measurement (vcstat_host_service)
+  # host_service_instances = false
   ## collect network distributed virtual switch measurement (vcstat_net_dvs)
   # net_dvs_instances = true
   ## collect network distributed virtual portgroup measurement (vcstat_net_dvp)
@@ -105,6 +107,8 @@ vcstat_host_firewall,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.l
 vcstat_host_hba,dcname=MyDC,clustername=MyCluster-01,device=vmhba0,driver=lpfc,esxhostname=myesxi01.local,vcenter=vcenter.local status="link-n/a",status_code=1i 1653060681000000000
 vcstat_host_nic,dcname=MyDC,clustername=MyCluster-01,device=vmnic0,driver=ntg3,esxhostname=myesxi01.local,vcenter=vcenter.local link_status="Down",link_status_code=2i 1653060681000000000
 vcstat_host_esxcli,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,moid=host-706,vcenter=vcenter.local  responding_code=0i,response_time_ns=109185876i 1653060681000000000
+vcstat_host_service,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,key=ntpd,vcenter=vcenter.local label="NTP Daemon",policy="on",required=false,running=true 1653060681000000000
+vcstat_host_service,dcname=MyDC,clustername=MyCluster-01,esxhostname=myesxi01.local,key=vpxa,vcenter=vcenter.local label="VMware vCenter Agent",policy="on",required=false,running=true 1653060681000000000
 vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_standalone_ports=0i,status="green",status_code=0i,num_ports=421i,max_ports=2147483647i 1653060682000000000
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1653060682000000000
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommitted=20511i,maintenance_mode="normal" 

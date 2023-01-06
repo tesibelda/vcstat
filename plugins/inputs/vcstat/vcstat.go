@@ -29,7 +29,7 @@ type VCstatConfig struct {
 	Password            string `toml:"password"`
 	Timeout             config.Duration
 	IntSkipNotRespondig int16           `toml:"intervals_skip_notresponding_esxcli_hosts"`
-	QueryBulkSize		int             `toml:"query_bulk_size"`
+	QueryBulkSize       int             `toml:"query_bulk_size"`
 	Log                 telegraf.Logger `toml:"-"`
 
 	ClusterInstances   bool `toml:"cluster_instances"`
@@ -39,6 +39,7 @@ type VCstatConfig struct {
 	HostNICInstances   bool `toml:"host_nic_instances"`
 	HostFwInstances    bool `toml:"host_firewall_instances"`
 	HostGraphics       bool `toml:"host_graphics_instances"`
+	HostServices       bool `toml:"host_service_instances"`
 	NetDVSInstances    bool `toml:"net_dvs_instances"`
 	NetDVPInstances    bool `toml:"net_dvp_instances"`
 	VMInstances        bool `toml:"vm_instances"`
@@ -85,6 +86,8 @@ var sampleConfig = `
   # host_hba_instances = false
   ## collect host network interface measurement (vcstat_host_nic)
   # host_nic_instances = false
+  ## collect host services measurement (vcstat_host_service)
+  # host_service_instances = false
   ## collect network distributed virtual switch measurement (vcstat_net_dvs)
   # net_dvs_instances = true
   ## collect network distributed virtual portgroup measurement (vcstat_net_dvp)
@@ -101,13 +104,14 @@ func init() {
 			Username:            "user@corp.local",
 			Password:            "secret",
 			Timeout:             config.Duration(time.Second * 0),
-			QueryBulkSize:		 100,
+			QueryBulkSize:       100,
 			IntSkipNotRespondig: 20,
 			ClusterInstances:    true,
 			DatastoreInstances:  false,
 			HostInstances:       true,
 			HostFwInstances:     false,
 			HostGraphics:        false,
+			HostServices:        false,
 			HostHBAInstances:    false,
 			HostNICInstances:    false,
 			NetDVSInstances:     true,
@@ -231,7 +235,7 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 
 	// selfmonitoring
 	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
-	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances || vcs.HostGraphics {
+	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
 		vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
 	}
 	for _, m := range selfstat.Metrics() {
@@ -338,7 +342,13 @@ func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulato
 		}
 	}
 
-	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances || vcs.HostGraphics {
+	if vcs.HostServices {
+		if err = col.CollectHostServices(ctx, acc); err != nil {
+			return err
+		}
+	}
+
+	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
 		if err = col.ReportHostEsxcliResponse(ctx, acc); err != nil {
 			return err
 		}
