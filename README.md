@@ -35,6 +35,16 @@ Use telegraf v1.14 or above so that execd input is available.
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Filter clusters by name, default is no filtering.
+  ## cluster names can be specified as glob patterns.
+  # clusters_include = []
+  # clusters_exclude = []
+
+  ## Filter hosts by name, default is no filtering.
+  ## host names can be specified as glob patterns.
+  # hosts_include = []
+  # hosts_exclude = []
+
   #### you may enable or disable data collection per instance type ####
   ## collect cluster measurement (vcstat_cluster)
   # cluster_instances = true

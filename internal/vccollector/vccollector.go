@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 
 	"github.com/tesibelda/vcstat/pkg/govplus"
@@ -30,6 +31,8 @@ type VcCollector struct {
 	url                 *url.URL
 	client              *govmomi.Client
 	coll                *property.Collector
+	filterClusters      filter.Filter
+	filterHosts         filter.Filter
 	dataDuration        time.Duration
 	skipNotRespondigFor time.Duration
 	queryBulkSize       int
@@ -49,6 +52,12 @@ func New(
 		urlString:    vcenterUrl,
 		dataDuration: dataDuration,
 	}
+	if err = vcc.SetFilterClusters(nil, nil); err != nil {
+		return nil, err
+	}
+	if err = vcc.SetFilterHosts(nil, nil); err != nil {
+		return nil, err
+	}
 	vcc.TLSCA = clicfg.TLSCA
 	vcc.InsecureSkipVerify = clicfg.InsecureSkipVerify
 
@@ -63,6 +72,28 @@ func New(
 // SetDataDuration sets max cache data duration
 func (c *VcCollector) SetDataDuration(du time.Duration) {
 	c.dataDuration = du
+}
+
+// SetFilterClusters sets clusters include and exclude filters
+func (c *VcCollector) SetFilterClusters(include []string, exclude []string) error {
+	var err error
+
+	c.filterClusters, err = filter.NewIncludeExcludeFilter(include, exclude)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetFilterHosts sets hosts include and exclude filters
+func (c *VcCollector) SetFilterHosts(include []string, exclude []string) error {
+	var err error
+
+	c.filterHosts, err = filter.NewIncludeExcludeFilter(include, exclude)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // SetQueryChunkSize sets chunk size of slice to use in sSphere property queries

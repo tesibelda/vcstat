@@ -53,6 +53,9 @@ func (c *VcCollector) CollectHostInfo(
 	for i, dc := range c.dcs {
 		// get Host references and split the list into chunks
 		for j, host := range c.hosts[i] {
+			if !c.filterHostMatch(i, host) {
+				continue
+			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
@@ -138,6 +141,9 @@ func (c *VcCollector) CollectHostHBA(
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
+			if !c.filterHostMatch(i, host) {
+				continue
+			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
@@ -225,6 +231,9 @@ func (c *VcCollector) CollectHostNIC(
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
+			if !c.filterHostMatch(i, host) {
+				continue
+			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
@@ -310,6 +319,9 @@ func (c *VcCollector) CollectHostFw(
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
+			if !c.filterHostMatch(i, host) {
+				continue
+			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
@@ -414,6 +426,9 @@ func (c *VcCollector) CollectHostServices(
 	for i, dc := range c.dcs {
 		// get HostServiceSystem references and split the list into chunks
 		for j, host := range c.hosts[i] {
+			if !c.filterHostMatch(i, host) {
+				continue
+			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
@@ -488,6 +503,9 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 	t = time.Now()
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
+			if !c.filterHostMatch(i, host) {
+				continue
+			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
@@ -525,6 +543,16 @@ func (c *VcCollector) getClusternameFromHost(dcindex int, host *object.HostSyste
 	}
 
 	return ""
+}
+
+func (c *VcCollector) filterHostMatch(i int, host *object.HostSystem) bool {
+	if !c.filterHosts.Match(host.Name()) {
+		return false
+	}
+	if !c.filterClusters.Match(c.getClusternameFromHost(i, host)) {
+		return false
+	}
+	return true
 }
 
 func (c *VcCollector) getHostObjectFromReference(

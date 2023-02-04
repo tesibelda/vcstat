@@ -32,6 +32,11 @@ type VCstatConfig struct {
 	QueryBulkSize       int             `toml:"query_bulk_size"`
 	Log                 telegraf.Logger `toml:"-"`
 
+	ClustersExclude []string `toml:"clusters_exclude"`
+	ClustersInclude []string `toml:"clusters_include"`
+	HostsExclude    []string `toml:"hosts_exclude"`
+	HostsInclude    []string `toml:"hosts_include"`
+
 	ClusterInstances   bool `toml:"cluster_instances"`
 	DatastoreInstances bool `toml:"datastore_instances"`
 	HostInstances      bool `toml:"host_instances"`
@@ -70,6 +75,16 @@ var sampleConfig = `
   # tls_ca = "/path/to/cafile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Filter clusters by name, default is no filtering.
+  ## cluster names can be specified as glob patterns.
+  # clusters_include = []
+  # clusters_exclude = []
+
+  ## Filter hosts by name, default is no filtering.
+  ## host names can be specified as glob patterns.
+  # hosts_include = []
+  # hosts_exclude = []
 
   #### you may enable or disable data collection per instance type ####
   ## collect cluster measurement (vcstat_cluster)
@@ -142,13 +157,21 @@ func (vcs *VCstatConfig) Init() error {
 		return err
 	}
 
-	// Set vccollector options
-	//   dataduration as half of the telegraf shim polling interval
+	/// Set vccollector options
+	// dataduration as half of the telegraf shim polling interval
 	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
 	vcs.vcc.SetSkipHostNotRespondingDuration(
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
 	)
 	vcs.vcc.SetQueryChunkSize(vcs.QueryBulkSize)
+	err = vcs.vcc.SetFilterClusters(vcs.ClustersInclude, vcs.ClustersExclude);
+	if err != nil {
+		return fmt.Errorf("Error parsing clusters filters: %w", err)
+	}
+	err = vcs.vcc.SetFilterHosts(vcs.HostsInclude, vcs.HostsExclude)
+	if err != nil {
+		return fmt.Errorf("Error parsing hosts filters: %w", err)
+	}
 
 	// selfmonitoring
 	u, err := url.Parse(vcs.VCenter)

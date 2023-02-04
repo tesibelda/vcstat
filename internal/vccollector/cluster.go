@@ -45,12 +45,15 @@ func (c *VcCollector) CollectClusterInfo(
 	for i, dc := range c.dcs {
 		// get cluster references and split the list into chunks
 		for _, cluster := range c.clusters[i] {
+			if !c.filterClusters.Match(cluster.Name()) {
+				continue
+			}
 			arefs = append(arefs, cluster.Reference())
 		}
 		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
 
 		for _, refs := range chunks {
-			err = c.coll.Retrieve(ctx, refs, []string{"name","summary"}, &clMos)
+			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary"}, &clMos)
 			if err != nil {
 				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
