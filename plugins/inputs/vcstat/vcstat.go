@@ -36,6 +36,8 @@ type VCstatConfig struct {
 	ClustersInclude []string `toml:"clusters_include"`
 	HostsExclude    []string `toml:"hosts_exclude"`
 	HostsInclude    []string `toml:"hosts_include"`
+	VmsExclude      []string `toml:"vms_exclude"`
+	VmsInclude      []string `toml:"vms_include"`
 
 	ClusterInstances   bool `toml:"cluster_instances"`
 	DatastoreInstances bool `toml:"datastore_instances"`
@@ -76,15 +78,20 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Filter clusters by name, default is no filtering.
-  ## cluster names can be specified as glob patterns.
+  ## Filter clusters by name, default is no filtering
+  ## cluster names can be specified as glob patterns
   # clusters_include = []
   # clusters_exclude = []
 
-  ## Filter hosts by name, default is no filtering.
-  ## host names can be specified as glob patterns.
+  ## Filter hosts by name, default is no filtering
+  ## host names can be specified as glob patterns
   # hosts_include = []
   # hosts_exclude = []
+
+  ## Filter VMs by name, default is no filtering
+  ## VM names can be specified as glob patterns
+  # vms_include = []
+  # vms_exclude = []
 
   #### you may enable or disable data collection per instance type ####
   ## collect cluster measurement (vcstat_cluster)
@@ -164,13 +171,17 @@ func (vcs *VCstatConfig) Init() error {
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
 	)
 	vcs.vcc.SetQueryChunkSize(vcs.QueryBulkSize)
-	err = vcs.vcc.SetFilterClusters(vcs.ClustersInclude, vcs.ClustersExclude);
+	err = vcs.vcc.SetFilterClusters(vcs.ClustersInclude, vcs.ClustersExclude)
 	if err != nil {
 		return fmt.Errorf("Error parsing clusters filters: %w", err)
 	}
 	err = vcs.vcc.SetFilterHosts(vcs.HostsInclude, vcs.HostsExclude)
 	if err != nil {
 		return fmt.Errorf("Error parsing hosts filters: %w", err)
+	}
+	err = vcs.vcc.SetFilterVms(vcs.VmsInclude, vcs.VmsExclude)
+	if err != nil {
+		return fmt.Errorf("Error parsing VMs filters: %w", err)
 	}
 
 	// selfmonitoring

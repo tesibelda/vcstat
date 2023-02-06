@@ -50,6 +50,9 @@ func (c *VcCollector) CollectVmsInfo(
 	for i, dc := range c.dcs {
 		// get VM references and split the list into chunks
 		for _, vm := range c.vms[i] {
+			if !c.filterVms.Match(vm.Name()) {
+				continue
+			}
 			arefs = append(arefs, vm.Reference())
 		}
 		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)

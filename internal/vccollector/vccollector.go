@@ -33,6 +33,7 @@ type VcCollector struct {
 	coll                *property.Collector
 	filterClusters      filter.Filter
 	filterHosts         filter.Filter
+	filterVms           filter.Filter
 	dataDuration        time.Duration
 	skipNotRespondigFor time.Duration
 	queryBulkSize       int
@@ -56,6 +57,9 @@ func New(
 		return nil, err
 	}
 	if err = vcc.SetFilterHosts(nil, nil); err != nil {
+		return nil, err
+	}
+	if err = vcc.SetFilterVms(nil, nil); err != nil {
 		return nil, err
 	}
 	vcc.TLSCA = clicfg.TLSCA
@@ -90,6 +94,17 @@ func (c *VcCollector) SetFilterHosts(include []string, exclude []string) error {
 	var err error
 
 	c.filterHosts, err = filter.NewIncludeExcludeFilter(include, exclude)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetFilterVms sets VMs include and exclude filters
+func (c *VcCollector) SetFilterVms(include []string, exclude []string) error {
+	var err error
+
+	c.filterVms, err = filter.NewIncludeExcludeFilter(include, exclude)
 	if err != nil {
 		return err
 	}
