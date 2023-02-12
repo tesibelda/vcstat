@@ -1,10 +1,10 @@
 module github.com/tesibelda/vcstat
 
-go 1.18
+go 1.19
 
 require (
 	github.com/influxdata/telegraf v1.24.4
-	github.com/vmware/govmomi v0.30.0
+	github.com/vmware/govmomi v0.30.2
 )
 
 require (
@@ -20,7 +20,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gosnmp/gosnmp v1.35.0 // indirect
+	github.com/gosnmp/gosnmp v1.34.0 // indirect
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -34,6 +34,6 @@ require (
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sleepinggenius2/gosmi v0.4.4 // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect
-	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
