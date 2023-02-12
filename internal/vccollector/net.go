@@ -78,8 +78,10 @@ func (c *VcCollector) CollectNetDVS(
 				dvstags["vcenter"] = c.client.Client.URL().Host
 
 				dvsfields["max_ports"] = dvsConfig.MaxPorts
+				dvsfields["num_hosts"] = len(dvsConfig.Host)
 				dvsfields["num_ports"] = dvsConfig.NumPorts
 				dvsfields["num_standalone_ports"] = dvsConfig.NumStandalonePorts
+				dvsfields["pnic_capacity_ratio_for_reservation"] = dvsConfig.PnicCapacityRatioForReservation
 				dvsfields["status"] = string(dvs.OverallStatus)
 				dvsfields["status_code"] = entityStatusCode(dvs.OverallStatus)
 

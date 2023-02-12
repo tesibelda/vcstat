@@ -146,9 +146,11 @@
   - fields:
     - status (string)
     - status_code (int) 0-green, 1-gray, 2-yellow, 3-red
+	- num_hosts (int)
     - num_ports (int)
     - max_ports (int)
     - num_standalone_ports (int)
+	- pnic_capacity_ratio_for_reservation (int)
 - vcstat_net_dvp
   - tags:
     - dvp
