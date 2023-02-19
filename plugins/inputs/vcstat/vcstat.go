@@ -27,6 +27,7 @@ type VCstatConfig struct {
 	VCenter             string `toml:"vcenter"`
 	Username            string `toml:"username"`
 	Password            string `toml:"password"`
+	InternalAlias       string `toml:"internal_alias"`
 	Timeout             config.Duration
 	IntSkipNotRespondig int16           `toml:"intervals_skip_notresponding_esxcli_hosts"`
 	QueryBulkSize       int             `toml:"query_bulk_size"`
@@ -68,15 +69,18 @@ var sampleConfig = `
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
   # timeout = "0s"
-  ## Max number of objects to gather per query
-  # query_bulk_size = 100
-  ## number of intervals to skip esxcli commands for not responding hosts
-  # intervals_skip_notresponding_esxcli_hosts = 20
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## optional alias tag for internal metrics
+  # internal_alias = ""
+  ## Max number of objects to gather per query
+  # query_bulk_size = 100
+  ## number of intervals to skip esxcli commands for not responding hosts
+  # intervals_skip_notresponding_esxcli_hosts = 20
 
   ## Filter clusters by name, default is no filtering
   ## cluster names can be specified as glob patterns
@@ -125,6 +129,7 @@ func init() {
 			VCenter:             "https://vcenter.local/sdk",
 			Username:            "user@corp.local",
 			Password:            "secret",
+			InternalAlias:       "",
 			Timeout:             config.Duration(time.Second * 0),
 			QueryBulkSize:       100,
 			IntSkipNotRespondig: 20,
@@ -190,6 +195,7 @@ func (vcs *VCstatConfig) Init() error {
 		return fmt.Errorf("Error parsing URL for vcenter: %w", err)
 	}
 	tags := map[string]string{
+		"alias":   vcs.InternalAlias,
 		"vcenter": u.Hostname(),
 	}
 	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)
