@@ -153,29 +153,17 @@ func (c *VcCollector) CollectHostHBA(
 			}
 			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(
-					fmt.Errorf(
-						"Could not get esxcli executor for host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
+				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
+				hostExecutorRunAddError(acc, "storage", host.Name(), err)
+				hostSt.setNotResponding(true)
 				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
 				}
-				acc.AddError(
-					fmt.Errorf(
-						"Could not run esxcli storage executor against host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
-				hostSt.setNotResponding(true)
 				continue
 			}
 			t = time.Now()
@@ -243,23 +231,17 @@ func (c *VcCollector) CollectHostNIC(
 			}
 			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
 			res, err = x.Run([]string{"network", "nic", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
+				hostExecutorRunAddError(acc, "nic", host.Name(), err)
+				hostSt.setNotResponding(true)
 				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
 				}
-				acc.AddError(
-					fmt.Errorf(
-						"Could not run esxcli network executor against host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
-				hostSt.setNotResponding(true)
 				continue
 			}
 			t = time.Now()
@@ -331,29 +313,17 @@ func (c *VcCollector) CollectHostFw(
 			}
 			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(
-					fmt.Errorf(
-						"Could not get esxcli executor for host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
+				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
 			res, err = x.Run([]string{"network", "firewall", "get"})
 			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
+				hostExecutorRunAddError(acc, "firewall", host.Name(), err)
+				hostSt.setNotResponding(true)
 				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
 				}
-				acc.AddError(
-					fmt.Errorf(
-						"Could not run esxcli firewall executor against host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
-				hostSt.setNotResponding(true)
 				continue
 			}
 			t = time.Now()
@@ -366,24 +336,12 @@ func (c *VcCollector) CollectHostFw(
 
 				enabled, err := strconv.ParseBool(res.Values[0]["Enabled"][0])
 				if err != nil {
-					acc.AddError(
-						fmt.Errorf(
-							"Could not parse firewall info for host %s: %w",
-							host.Name(),
-							err,
-						),
-					)
+					hostExecutorParseAddError(acc, "firewall", host.Name(), err)
 					continue
 				}
 				loaded, err := strconv.ParseBool(res.Values[0]["Loaded"][0])
 				if err != nil {
-					acc.AddError(
-						fmt.Errorf(
-							"Could not parse firewall info for host %s: %w",
-							host.Name(),
-							err,
-						),
-					)
+					hostExecutorParseAddError(acc, "firewall", host.Name(), err)
 					continue
 				}
 				fwfields["defaultaction"] = res.Values[0]["DefaultAction"][0]
@@ -566,6 +524,38 @@ func (c *VcCollector) getHostObjectFromReference(
 	}
 
 	return nil
+}
+
+func hostExecutorNewAddError(acc telegraf.Accumulator, host string, err error) {
+	acc.AddError(
+		fmt.Errorf(
+			"Could not get esxcli executor for host %s: %w",
+			host,
+			err,
+		),
+	)
+}
+
+func hostExecutorParseAddError(acc telegraf.Accumulator, executor, host string, err error) {
+	acc.AddError(
+		fmt.Errorf(
+			"Could not parse %s info for host %s: %w",
+			executor,
+			host,
+			err,
+		),
+	)
+}
+
+func hostExecutorRunAddError(acc telegraf.Accumulator, executor, host string, err error) {
+	acc.AddError(
+		fmt.Errorf(
+			"Could not run esxcli %s executor against host %s: %w",
+			executor,
+			host,
+			err,
+		),
+	)
 }
 
 // hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting
