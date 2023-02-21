@@ -168,25 +168,19 @@ func (c *VcCollector) CollectHostHBA(
 			}
 			t = time.Now()
 
-			if len(res.Values) > 0 {
-				var keys []string
-				for key := range res.Values[0] {
-					keys = append(keys, key) //nolint
-				}
-				for _, rv := range res.Values {
-					if len(rv) > 0 && len(rv["LinkState"]) > 0 {
-						hbatags["clustername"] = c.getClusternameFromHost(i, host)
-						hbatags["dcname"] = dc.Name()
-						hbatags["device"] = rv["HBAName"][0]
-						hbatags["driver"] = rv["Driver"][0]
-						hbatags["esxhostname"] = host.Name()
-						hbatags["vcenter"] = c.client.Client.URL().Host
+			for _, rv := range res.Values {
+				if len(rv) > 0 && len(rv["LinkState"]) > 0 {
+					hbatags["clustername"] = c.getClusternameFromHost(i, host)
+					hbatags["dcname"] = dc.Name()
+					hbatags["device"] = rv["HBAName"][0]
+					hbatags["driver"] = rv["Driver"][0]
+					hbatags["esxhostname"] = host.Name()
+					hbatags["vcenter"] = c.client.Client.URL().Host
 
-						hbafields["link_state"] = rv["LinkState"][0]
-						hbafields["link_state_code"] = hbaLinkStateCode(rv["LinkState"][0])
+					hbafields["link_state"] = rv["LinkState"][0]
+					hbafields["link_state_code"] = hbaLinkStateCode(rv["LinkState"][0])
 
-						acc.AddFields("vcstat_host_hba", hbafields, hbatags, t)
-					}
+					acc.AddFields("vcstat_host_hba", hbafields, hbatags, t)
 				}
 			}
 		}
@@ -246,29 +240,23 @@ func (c *VcCollector) CollectHostNIC(
 			}
 			t = time.Now()
 
-			if len(res.Values) > 0 {
-				var keys []string
-				for key := range res.Values[0] {
-					keys = append(keys, key) //nolint
-				}
-				for _, rv := range res.Values {
-					if len(rv) > 0 && len(rv["LinkStatus"]) > 0 {
-						nictags["clustername"] = c.getClusternameFromHost(i, host)
-						nictags["dcname"] = dc.Name()
-						nictags["device"] = rv["Name"][0]
-						nictags["driver"] = rv["Driver"][0]
-						nictags["esxhostname"] = host.Name()
-						nictags["vcenter"] = c.client.Client.URL().Host
+			for _, rv := range res.Values {
+				if len(rv) > 0 && len(rv["LinkStatus"]) > 0 {
+					nictags["clustername"] = c.getClusternameFromHost(i, host)
+					nictags["dcname"] = dc.Name()
+					nictags["device"] = rv["Name"][0]
+					nictags["driver"] = rv["Driver"][0]
+					nictags["esxhostname"] = host.Name()
+					nictags["vcenter"] = c.client.Client.URL().Host
 
-						nicfields["admin_status"] = rv["AdminStatus"][0]
-						nicfields["link_status"] = rv["LinkStatus"][0]
-						nicfields["link_status_code"] = nicLinkStatusCode(rv["LinkStatus"][0])
-						nicfields["duplex"] = rv["Duplex"][0]
-						nicfields["mac"] = rv["MACAddress"][0]
-						nicfields["speed"] = rv["Speed"][0]
+					nicfields["admin_status"] = rv["AdminStatus"][0]
+					nicfields["link_status"] = rv["LinkStatus"][0]
+					nicfields["link_status_code"] = nicLinkStatusCode(rv["LinkStatus"][0])
+					nicfields["duplex"] = rv["Duplex"][0]
+					nicfields["mac"] = rv["MACAddress"][0]
+					nicfields["speed"] = rv["Speed"][0]
 
-						acc.AddFields("vcstat_host_nic", nicfields, nictags, t)
-					}
+					acc.AddFields("vcstat_host_nic", nicfields, nictags, t)
 				}
 			}
 		}
@@ -391,8 +379,7 @@ func (c *VcCollector) CollectHostServices(
 				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
 				continue
 			}
-			s, err = host.ConfigManager().ServiceSystem(ctx)
-			if err != nil {
+			if s, err = host.ConfigManager().ServiceSystem(ctx); err != nil {
 				return fmt.Errorf("Could not get host service system: %w", err)
 			}
 			hrefs = append(hrefs, host.Reference())
@@ -418,11 +405,12 @@ func (c *VcCollector) CollectHostServices(
 
 				// find host of this service
 				sref = hsMo.Self.Reference()
-				for k, r := range srefs {
-					if r == sref {
-						hsref = hrefs[k]
-						break
-					}
+				hsref = findHostRefInServiceRefList(hrefs, srefs, hsMo.Self.Reference())
+				if hsref.Type == "" {
+					acc.AddError(
+						fmt.Errorf("Could not find host for service reference: %s", sref),
+					)
+					continue
 				}
 				host = c.getHostObjectFromReference(i, &hsref)
 				hstags["clustername"] = c.getClusternameFromHost(i, host)
@@ -556,6 +544,21 @@ func hostExecutorRunAddError(acc telegraf.Accumulator, executor, host string, er
 			err,
 		),
 	)
+}
+
+func findHostRefInServiceRefList(
+	hrs []types.ManagedObjectReference,
+	srs []types.ManagedObjectReference,
+	sr types.ManagedObjectReference,
+) types.ManagedObjectReference {
+	var hr types.ManagedObjectReference
+	for k, r := range srs {
+		if r == sr {
+			hr = hrs[k]
+			break
+		}
+	}
+	return hr
 }
 
 // hostConnectionStateCode converts types.HostSystemConnectionState to int16 for easy alerting

@@ -347,8 +347,9 @@ func (vcs *VCstatConfig) gatherHighLevelEntities(ctx context.Context, acc telegr
 // gatherHost gathers info and stats per host
 func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
-		col *vccollector.VcCollector
-		err error
+		col                 *vccollector.VcCollector
+		hasEsxcliCollection bool
+		err                 error
 	)
 
 	col = vcs.vcc
@@ -359,36 +360,41 @@ func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulato
 	}
 
 	if vcs.HostHBAInstances {
+		hasEsxcliCollection = true
 		if err = col.CollectHostHBA(ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostNICInstances {
+		hasEsxcliCollection = true
 		if err = col.CollectHostNIC(ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostFwInstances {
+		hasEsxcliCollection = true
 		if err = col.CollectHostFw(ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostGraphics {
+		hasEsxcliCollection = true
 		if err = col.CollectHostGraphics(ctx, acc); err != nil {
 			return err
 		}
 	}
 
 	if vcs.HostServices {
+		hasEsxcliCollection = true
 		if err = col.CollectHostServices(ctx, acc); err != nil {
 			return err
 		}
 	}
 
-	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
+	if hasEsxcliCollection {
 		if err = col.ReportHostEsxcliResponse(ctx, acc); err != nil {
 			return err
 		}

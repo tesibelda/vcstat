@@ -25,8 +25,8 @@ func (c *VcCollector) CollectHostGraphics(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		grtags      = make(map[string]string)
-		grfields    = make(map[string]interface{})
+		grtags       = make(map[string]string)
+		grfields     = make(map[string]interface{})
 		x            *esxcli.Executor
 		res          *esxcli.Response
 		hostSt       *hostState
@@ -79,27 +79,21 @@ func (c *VcCollector) CollectHostGraphics(
 			}
 			t = time.Now()
 
-			if len(res.Values) > 0 {
-				var keys []string
-				for key := range res.Values[0] {
-					keys = append(keys, key) //nolint
-				}
-				for _, rv := range res.Values {
-					if len(rv) > 0 && len(rv["DeviceName"]) > 0 {
-						grtags["clustername"] = c.getClusternameFromHost(i, host)
-						grtags["dcname"] = dc.Name()
-						grtags["address"] = rv["Address"][0]
-						grtags["device"] = rv["DeviceName"][0]
-						grtags["esxhostname"] = host.Name()
-						grtags["vcenter"] = c.client.Client.URL().Host
+			for _, rv := range res.Values {
+				if len(rv) > 0 && len(rv["DeviceName"]) > 0 {
+					grtags["clustername"] = c.getClusternameFromHost(i, host)
+					grtags["dcname"] = dc.Name()
+					grtags["address"] = rv["Address"][0]
+					grtags["device"] = rv["DeviceName"][0]
+					grtags["esxhostname"] = host.Name()
+					grtags["vcenter"] = c.client.Client.URL().Host
 
-						grfields["driver"] = rv["DriverVersion"][0]
-						grfields["memory"], _ = strconv.ParseFloat(rv["MemoryUsed"][0], 32)
-						grfields["temperature"], _ = strconv.ParseFloat(rv["Temperature"][0], 32)
-						grfields["cpu"], _ = strconv.ParseFloat(rv["Utilization"][0], 32)
+					grfields["driver"] = rv["DriverVersion"][0]
+					grfields["memory"], _ = strconv.ParseFloat(rv["MemoryUsed"][0], 32)
+					grfields["temperature"], _ = strconv.ParseFloat(rv["Temperature"][0], 32)
+					grfields["cpu"], _ = strconv.ParseFloat(rv["Utilization"][0], 32)
 
-						acc.AddFields("vcstat_host_graphics", grfields, grtags, t)
-					}
+					acc.AddFields("vcstat_host_graphics", grfields, grtags, t)
 				}
 			}
 		}
