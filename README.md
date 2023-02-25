@@ -110,7 +110,7 @@ Metric timestamp precision will be set according to the polling interval, so it 
 
 * Wait for 1 minute or press enter. You should see lines like those in the Example output below.
 
-* Note that vcstat will escape querying not connected hosts and also skip hosts for intervals_skip_notresponding_esxcli_hosts intervals if they don't respond to esxcli commands
+* Note that vcstat will escape querying not connected hosts and also skip hosts for intervals_skip_notresponding_esxcli_hosts intervals if they don't respond to esxcli commands or that response takes longer than interval
 
 # Example output
 

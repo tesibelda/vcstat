@@ -123,7 +123,6 @@ var sampleConfig = `
 `
 
 func init() {
-	m, _ := time.ParseDuration("60s") //nolint: hardcoded 1m expects no error
 	inputs.Add("vcstat", func() telegraf.Input {
 		return &VCstatConfig{
 			VCenter:             "https://vcenter.local/sdk",
@@ -144,7 +143,7 @@ func init() {
 			NetDVSInstances:     true,
 			NetDVPInstances:     false,
 			VMInstances:         false,
-			pollInterval:        m,
+			pollInterval:        time.Second * 60,
 		}
 	})
 }
@@ -170,8 +169,8 @@ func (vcs *VCstatConfig) Init() error {
 	}
 
 	/// Set vccollector options
-	// dataduration as half of the telegraf shim polling interval
-	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() / 2))
+	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() * 0.9))
+	vcs.vcc.SetMaxResponseTime(time.Duration(vcs.pollInterval))
 	vcs.vcc.SetSkipHostNotRespondingDuration(
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
 	)
@@ -388,7 +387,6 @@ func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulato
 	}
 
 	if vcs.HostServices {
-		hasEsxcliCollection = true
 		if err = col.CollectHostServices(ctx, acc); err != nil {
 			return err
 		}

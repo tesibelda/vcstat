@@ -34,6 +34,7 @@ type VcCollector struct {
 	filterClusters      filter.Filter
 	filterHosts         filter.Filter
 	filterVms           filter.Filter
+	maxResponseDuration time.Duration
 	dataDuration        time.Duration
 	skipNotRespondigFor time.Duration
 	queryBulkSize       int
@@ -111,6 +112,11 @@ func (c *VcCollector) SetFilterVms(include []string, exclude []string) error {
 	return nil
 }
 
+// SetMaxResponseTime sets max response time to consider an esxcli command as notresponding
+func (c *VcCollector) SetMaxResponseTime(du time.Duration) {
+	c.maxResponseDuration = du
+}
+
 // SetQueryChunkSize sets chunk size of slice to use in sSphere property queries
 func (c *VcCollector) SetQueryChunkSize(b int) {
 	c.queryBulkSize = b
@@ -174,7 +180,8 @@ func entityStatusCode(status types.ManagedEntityStatus) int16 {
 }
 
 // chuckMoRefSlice returns a list of lists segregating a list of oManagedObjectReference
-//   into chunks with a size of chunkSize
+//
+//	into chunks with a size of chunkSize
 func chunckMoRefSlice(
 	fList []types.ManagedObjectReference,
 	chunkSize int,

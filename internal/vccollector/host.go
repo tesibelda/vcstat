@@ -157,7 +157,7 @@ func (c *VcCollector) CollectHostHBA(
 				continue
 			}
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
-			hostSt.setMeanResponseTime(time.Since(startTime))
+			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
 				hostExecutorRunAddError(acc, "storage", host.Name(), err)
 				hostSt.setNotResponding(true)
@@ -229,7 +229,7 @@ func (c *VcCollector) CollectHostNIC(
 				continue
 			}
 			res, err = x.Run([]string{"network", "nic", "list"})
-			hostSt.setMeanResponseTime(time.Since(startTime))
+			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
 				hostExecutorRunAddError(acc, "nic", host.Name(), err)
 				hostSt.setNotResponding(true)
@@ -305,7 +305,7 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 			res, err = x.Run([]string{"network", "firewall", "get"})
-			hostSt.setMeanResponseTime(time.Since(startTime))
+			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
 				hostExecutorRunAddError(acc, "firewall", host.Name(), err)
 				hostSt.setNotResponding(true)

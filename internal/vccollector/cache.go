@@ -280,11 +280,14 @@ func (c *hostState) setNotResponding(resp bool) {
 	}
 }
 
-func (c *hostState) setMeanResponseTime(dur time.Duration) {
+func (c *hostState) setMeanResponseTime(dur, max time.Duration) {
 	if c.responseTime == 0 {
 		c.responseTime = dur
 	} else {
 		c.responseTime = (c.responseTime + dur) / 2
+	}
+	if dur > max {
+		c.setNotResponding(true)
 	}
 }
 
