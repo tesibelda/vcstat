@@ -109,7 +109,7 @@ func (c *VcCollector) CollectHostInfo(
 				hsfields["num_cpus"] = h.NumCpuCores
 				hsfields["cpu_freq"] = h.CpuMhz
 				hsfields["num_vms"] = len(hsMo.Vm)
-				hsfields["num_datasotres"] = len(hsMo.Datastore)
+				hsfields["num_datastores"] = len(hsMo.Datastore)
 
 				acc.AddFields("vcstat_host", hsfields, hstags, t)
 			}
