@@ -65,7 +65,7 @@ func (c *VcCollector) CollectHostInfo(
 		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
 
 		for _, refs := range chunks {
-			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary"}, &hsMos)
+			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary", "vm", "datastore"}, &hsMos)
 			if err != nil {
 				if err, exit := govplus.IsHardQueryError(err); exit {
 					return err
@@ -108,6 +108,8 @@ func (c *VcCollector) CollectHostInfo(
 				hsfields["memory_size"] = h.MemorySize
 				hsfields["num_cpus"] = h.NumCpuCores
 				hsfields["cpu_freq"] = h.CpuMhz
+				hsfields["num_vms"] = len(hsMo.Vm)
+				hsfields["num_datasotres"] = len(hsMo.Datastore)
 
 				acc.AddFields("vcstat_host", hsfields, hstags, t)
 			}

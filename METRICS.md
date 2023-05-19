@@ -66,6 +66,8 @@
 	- memory_size (int) in bytes
 	- num_cpus (int)
 	- cpu_freq (int) in MHz
+	- num_datastores (int)
+	- num_vms (int)
 - vcstat_host_esxcli
   - tags:
     - esxhostname
