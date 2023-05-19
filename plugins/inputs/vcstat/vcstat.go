@@ -52,6 +52,7 @@ type VCstatConfig struct {
 	NetDVPInstances    bool `toml:"net_dvp_instances"`
 	VMInstances        bool `toml:"vm_instances"`
 
+	version      string
 	pollInterval time.Duration
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -188,18 +189,10 @@ func (vcs *VCstatConfig) Init() error {
 		return fmt.Errorf("Error parsing VMs filters: %w", err)
 	}
 
-	// selfmonitoring
-	u, err := url.Parse(vcs.VCenter)
+	_, err = url.Parse(vcs.VCenter)
 	if err != nil {
 		return fmt.Errorf("Error parsing URL for vcenter: %w", err)
 	}
-	tags := map[string]string{
-		"alias":   vcs.InternalAlias,
-		"vcenter": u.Hostname(),
-	}
-	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)
-	vcs.NotRespondingHosts = selfstat.Register("vcstat", "notresponding_esxcli_hosts", tags)
-	vcs.SessionsCreated = selfstat.Register("vcstat", "sessions_created", tags)
 
 	return err
 }
@@ -220,6 +213,27 @@ func (vcs *VCstatConfig) SetPollInterval(pollInterval time.Duration) error {
 		vcs.Timeout = config.Duration(pollInterval)
 	}
 	return nil
+}
+
+// SetVersion let telegraf shim know this version
+func (vcs *VCstatConfig) SetVersion(version string) {
+	vcs.version = version
+}
+
+// StartSelfMetrics initialices selfmonitoring
+func (vcs *VCstatConfig) StartSelfMetrics() {
+	u, err := url.Parse(vcs.VCenter)
+	if err != nil {
+		return
+	}
+	tags := map[string]string{
+		"alias":   vcs.InternalAlias,
+		"vcenter": u.Hostname(),
+		"vcstat_version": vcs.version,
+	}
+	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)
+	vcs.NotRespondingHosts = selfstat.Register("vcstat", "notresponding_esxcli_hosts", tags)
+	vcs.SessionsCreated = selfstat.Register("vcstat", "sessions_created", tags)
 }
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up

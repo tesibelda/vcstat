@@ -190,6 +190,7 @@
 - internal_vcstat
   - tags:
     - vcenter
+    - vcstat_version
   - fields:
     - sessions_created (int)
     - gather_time_ns (int)

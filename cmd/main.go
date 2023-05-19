@@ -53,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Tell vcstat shim the configured polling interval
+	// Set vcstat shim with the configured polling interval and version
 	vcCfg, ok := shim.Input.(*vcstat.VCstatConfig)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "Error getting shim input as VCstatConfig\n")
@@ -63,6 +63,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error setting vcstat shim polling interval: %s\n", err)
 		os.Exit(1)
 	}
+	vcCfg.SetVersion(Version)
+	vcCfg.StartSelfMetrics()
 
 	// run a single plugin until stdin closes or we receive a termination signal
 	if err = shim.Run(*pollInterval); err != nil {

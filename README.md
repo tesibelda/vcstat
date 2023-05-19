@@ -131,7 +131,7 @@ vcstat_net_dvs,dcname=MyDC,dvs=DSwitch-E1,moid=dvs-e1,vcenter=vcenter.local num_
 vcstat_net_dvp,dcname=MyDC,dvp=DSwitch-E1-DVUplinks-e1,moid=dvportgroup-e1,uplink=true,vcenter=vcenter.local status="green",status_code=0i,num_ports=16i 1653060682000000000
 vcstat_datastore,dcname=MyDC,dsname=DS_Departement1,moid=datastore-725,type=VMFS,vcenter=vcenter.local accessible=true,capacity=2198754820096i,freespace=730054262784i,uncommitted=20511i,maintenance_mode="normal" 
 vcstat_vm,clustername=MyCluster-01,dcname=MyDC,esxhostname=myesxi01.local,moid=vm-4524,vcenter.local,vmname=vmserver01 status="green",status_code=0i,consolidation_needed=false,max_cpu_usage=11972i,num_eth_cards=1i,num_vdisks=2i,connection_state_code=0i,max_mem_usage=8589934592i,num_vcpus=4i,power_state_code=0i,template=false,connection_state="connected",memory_size=8589934592i,power_state="poweredOn" 1653060683000000000
-internal_vcstat,vcenter=vcenter.local sessions_created=1i,gather_time_ns=1764839000i,notresponding_esxcli_hosts=0i 1653060683000000000
+internal_vcstat,vcenter=vcenter.local,vcstat_version=0.1.10 sessions_created=1i,gather_time_ns=1764839000i,notresponding_esxcli_hosts=0i 1653060683000000000
 ```
 
 # Metrics
