@@ -227,8 +227,8 @@ func (vcs *VCstatConfig) StartSelfMetrics() {
 		return
 	}
 	tags := map[string]string{
-		"alias":   vcs.InternalAlias,
-		"vcenter": u.Hostname(),
+		"alias":          vcs.InternalAlias,
+		"vcenter":        u.Hostname(),
 		"vcstat_version": vcs.version,
 	}
 	vcs.GatherTime = selfstat.Register("vcstat", "gather_time_ns", tags)

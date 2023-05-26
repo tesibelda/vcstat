@@ -468,10 +468,8 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 			responding_code = 0
 			if !hostSt.isHostConnected() {
 				responding_code = 1
-			} else {
-				if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
-					responding_code = 2
-				}
+			} else if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+				responding_code = 2
 			}
 			hsfields["responding_code"] = responding_code
 			hsfields["response_time_ns"] = int(hostSt.responseTime.Nanoseconds())
