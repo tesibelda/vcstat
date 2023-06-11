@@ -44,10 +44,10 @@ func (c *VcCollector) CollectHostInfo(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get host info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get host info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -57,7 +57,7 @@ func (c *VcCollector) CollectHostInfo(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 			arefs = append(arefs, host.Reference())
@@ -71,7 +71,7 @@ func (c *VcCollector) CollectHostInfo(
 					return err
 				}
 				acc.AddError(
-					fmt.Errorf("Could not retrieve summary for host reference list: %w", err),
+					fmt.Errorf("could not retrieve summary for host reference list: %w", err),
 				)
 				continue
 			}
@@ -82,7 +82,7 @@ func (c *VcCollector) CollectHostInfo(
 				r = s.Runtime
 				h = s.Hardware
 				if hostSt = c.getHostState(i, hsMo.Name); hostSt == nil {
-					acc.AddError(fmt.Errorf("Could not find host state for %s", hsMo.Name))
+					acc.AddError(fmt.Errorf("could not find host state for %s", hsMo.Name))
 					continue
 				}
 
@@ -135,10 +135,10 @@ func (c *VcCollector) CollectHostHBA(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host HBAs info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get host HBAs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -147,7 +147,7 @@ func (c *VcCollector) CollectHostHBA(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -207,10 +207,10 @@ func (c *VcCollector) CollectHostNIC(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host NICs info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get host NICs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -219,7 +219,7 @@ func (c *VcCollector) CollectHostNIC(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -283,10 +283,10 @@ func (c *VcCollector) CollectHostFw(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get host firewalls info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get host firewalls info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -295,7 +295,7 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -365,10 +365,10 @@ func (c *VcCollector) CollectHostServices(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get host services info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get host services info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -378,11 +378,11 @@ func (c *VcCollector) CollectHostServices(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 			if s, err = host.ConfigManager().ServiceSystem(ctx); err != nil {
-				return fmt.Errorf("Could not get host service system: %w", err)
+				return fmt.Errorf("could not get host service system: %w", err)
 			}
 			hrefs = append(hrefs, host.Reference())
 			srefs = append(srefs, s.Reference())
@@ -396,7 +396,7 @@ func (c *VcCollector) CollectHostServices(
 					return err
 				}
 				acc.AddError(
-					fmt.Errorf("Could not retrieve info for host service reference list: %w", err),
+					fmt.Errorf("could not retrieve info for host service reference list: %w", err),
 				)
 				continue
 			}
@@ -410,7 +410,7 @@ func (c *VcCollector) CollectHostServices(
 				hsref = findHostRefInServiceRefList(hrefs, srefs, hsMo.Self.Reference())
 				if hsref.Type == "" {
 					acc.AddError(
-						fmt.Errorf("Could not find host for service reference: %s", sref),
+						fmt.Errorf("could not find host for service reference: %s", sref),
 					)
 					continue
 				}
@@ -455,7 +455,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 
@@ -517,7 +517,7 @@ func (c *VcCollector) getHostObjectFromReference(
 func hostExecutorNewAddError(acc telegraf.Accumulator, host string, err error) {
 	acc.AddError(
 		fmt.Errorf(
-			"Could not get esxcli executor for host %s: %w",
+			"could not get esxcli executor for host %s: %w",
 			host,
 			err,
 		),
@@ -527,7 +527,7 @@ func hostExecutorNewAddError(acc telegraf.Accumulator, host string, err error) {
 func hostExecutorParseAddError(acc telegraf.Accumulator, executor, host string, err error) {
 	acc.AddError(
 		fmt.Errorf(
-			"Could not parse %s info for host %s: %w",
+			"could not parse %s info for host %s: %w",
 			executor,
 			host,
 			err,
@@ -538,7 +538,7 @@ func hostExecutorParseAddError(acc telegraf.Accumulator, executor, host string, 
 func hostExecutorRunAddError(acc telegraf.Accumulator, executor, host string, err error) {
 	acc.AddError(
 		fmt.Errorf(
-			"Could not run esxcli %s executor against host %s: %w",
+			"could not run esxcli %s executor against host %s: %w",
 			executor,
 			host,
 			err,

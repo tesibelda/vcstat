@@ -36,10 +36,10 @@ func (c *VcCollector) CollectClusterInfo(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get clusters info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get clusters info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -60,7 +60,7 @@ func (c *VcCollector) CollectClusterInfo(
 				}
 				acc.AddError(
 					fmt.Errorf(
-						"Could not retrieve summary for cluster reference list: %w",
+						"could not retrieve summary for cluster reference list: %w",
 						err,
 					),
 				)
@@ -72,7 +72,7 @@ func (c *VcCollector) CollectClusterInfo(
 				resourceSum = clMo.Summary.(*types.ClusterComputeResourceSummary)
 				if resourceSum == nil {
 					return fmt.Errorf(
-						"Could not get cluster resource summary for %s",
+						"could not get cluster resource summary for %s",
 						clMo.Name,
 					)
 				}

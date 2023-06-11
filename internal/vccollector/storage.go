@@ -34,10 +34,10 @@ func (c *VcCollector) CollectDatastoresInfo(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get datastores info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get datastores info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersDatastores(ctx); err != nil {
-		return fmt.Errorf("Could not get datastore entity list: %w", err)
+		return fmt.Errorf("could not get datastore entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -54,7 +54,7 @@ func (c *VcCollector) CollectDatastoresInfo(
 					return err
 				}
 				acc.AddError(
-					fmt.Errorf("Could not retrieve summary for datastore reference list: %w", err),
+					fmt.Errorf("could not retrieve summary for datastore reference list: %w", err),
 				)
 				continue
 			}

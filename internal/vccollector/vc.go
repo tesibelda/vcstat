@@ -31,7 +31,7 @@ func (c *VcCollector) CollectVcenterInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get vcenter info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get vcenter info: %w", govplus.ErrorNoClient)
 	}
 	cli = c.client.Client
 

@@ -40,11 +40,11 @@ func (c *VcCollector) CollectVmsInfo(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get VMs info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get VMs info: %w", govplus.ErrorNoClient)
 	}
 
 	if err := c.getAllDatacentersVMs(ctx); err != nil {
-		return fmt.Errorf("Could not get virtual machine entity list: %w", err)
+		return fmt.Errorf("could not get virtual machine entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -61,10 +61,10 @@ func (c *VcCollector) CollectVmsInfo(
 			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &vmMos)
 			if err != nil {
 				if err, exit = govplus.IsHardQueryError(err); exit {
-					return fmt.Errorf("Could not get vm list summary property: %w", err)
+					return fmt.Errorf("could not get vm list summary property: %w", err)
 				}
 				acc.AddError(
-					fmt.Errorf("Could not get vm list summary property: %w", err),
+					fmt.Errorf("could not get vm list summary property: %w", err),
 				)
 				continue
 			}

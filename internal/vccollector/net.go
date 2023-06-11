@@ -37,10 +37,10 @@ func (c *VcCollector) CollectNetDVS(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get network DVSs info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get network DVSs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
-		return fmt.Errorf("Could not get network entity list: %w", err)
+		return fmt.Errorf("could not get network entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -60,7 +60,7 @@ func (c *VcCollector) CollectNetDVS(
 					return err
 				}
 				acc.AddError(
-					fmt.Errorf("Could not get config property for DVS reference list: %w", err),
+					fmt.Errorf("could not get config property for DVS reference list: %w", err),
 				)
 				continue
 			}
@@ -68,7 +68,7 @@ func (c *VcCollector) CollectNetDVS(
 
 			for _, dvs := range dvsMos {
 				if dvsConfig = dvs.Config.GetDVSConfigInfo(); dvsConfig == nil {
-					acc.AddError(fmt.Errorf("Could not get DVS configuration info"))
+					acc.AddError(fmt.Errorf("could not get DVS configuration info"))
 					continue
 				}
 
@@ -110,10 +110,10 @@ func (c *VcCollector) CollectNetDVP(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get network DVPs info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get network DVPs info: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersNetworks(ctx); err != nil {
-		return fmt.Errorf("Could not get network entity list: %w", err)
+		return fmt.Errorf("could not get network entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
@@ -129,10 +129,10 @@ func (c *VcCollector) CollectNetDVP(
 			err = c.coll.Retrieve(ctx, refs, []string{"config", "overallStatus"}, &dvpMos)
 			if err != nil {
 				if err, exit = govplus.IsHardQueryError(err); exit {
-					return fmt.Errorf("Could not get DVP list config property: %w", err)
+					return fmt.Errorf("could not get DVP list config property: %w", err)
 				}
 				acc.AddError(
-					fmt.Errorf("Could not get DVP list config property: %w", err),
+					fmt.Errorf("could not get DVP list config property: %w", err),
 				)
 				continue
 			}

@@ -35,16 +35,16 @@ func (c *VcCollector) CollectHostGraphics(
 	)
 
 	if c.client == nil || c.coll == nil {
-		return fmt.Errorf("Could not get graphics device stats: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get graphics device stats: %w", govplus.ErrorNoClient)
 	}
 	if err = c.getAllDatacentersClustersAndHosts(ctx); err != nil {
-		return fmt.Errorf("Could not get cluster and host entity list: %w", err)
+		return fmt.Errorf("could not get cluster and host entity list: %w", err)
 	}
 
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("Could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -54,7 +54,7 @@ func (c *VcCollector) CollectHostGraphics(
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
 				acc.AddError(
 					fmt.Errorf(
-						"Could not get esxcli executor for host %s: %w",
+						"could not get esxcli executor for host %s: %w",
 						host.Name(),
 						err,
 					),
@@ -69,7 +69,7 @@ func (c *VcCollector) CollectHostGraphics(
 				}
 				acc.AddError(
 					fmt.Errorf(
-						"Could not run esxcli storage executor against host %s: %w",
+						"could not run esxcli storage executor against host %s: %w",
 						host.Name(),
 						err,
 					),

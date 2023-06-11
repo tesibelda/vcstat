@@ -178,20 +178,20 @@ func (vcs *VCstatConfig) Init() error {
 	vcs.vcc.SetQueryChunkSize(vcs.QueryBulkSize)
 	err = vcs.vcc.SetFilterClusters(vcs.ClustersInclude, vcs.ClustersExclude)
 	if err != nil {
-		return fmt.Errorf("Error parsing clusters filters: %w", err)
+		return fmt.Errorf("error parsing clusters filters: %w", err)
 	}
 	err = vcs.vcc.SetFilterHosts(vcs.HostsInclude, vcs.HostsExclude)
 	if err != nil {
-		return fmt.Errorf("Error parsing hosts filters: %w", err)
+		return fmt.Errorf("error parsing hosts filters: %w", err)
 	}
 	err = vcs.vcc.SetFilterVms(vcs.VmsInclude, vcs.VmsExclude)
 	if err != nil {
-		return fmt.Errorf("Error parsing VMs filters: %w", err)
+		return fmt.Errorf("error parsing VMs filters: %w", err)
 	}
 
 	_, err = url.Parse(vcs.VCenter)
 	if err != nil {
-		return fmt.Errorf("Error parsing URL for vcenter: %w", err)
+		return fmt.Errorf("error parsing URL for vcenter: %w", err)
 	}
 
 	return err

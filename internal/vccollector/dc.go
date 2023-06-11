@@ -28,11 +28,11 @@ func (c *VcCollector) CollectDatacenterInfo(
 	)
 
 	if c.client == nil {
-		return fmt.Errorf("Could not get datacenters info: %w", govplus.ErrorNoClient)
+		return fmt.Errorf("could not get datacenters info: %w", govplus.ErrorNoClient)
 	}
 
 	if err = c.getAllDatacentersEntities(ctx); err != nil {
-		return fmt.Errorf("Could not get all datacenters entity lists: %w", err)
+		return fmt.Errorf("could not get all datacenters entity lists: %w", err)
 	}
 	t = time.Now()
 

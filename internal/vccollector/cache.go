@@ -54,7 +54,7 @@ func (c *VcCollector) getDatacenters(ctx context.Context) error {
 
 	finder := find.NewFinder(c.client.Client, false)
 	if c.dcs, err = finder.DatacenterList(ctx, strAsterisk); err != nil {
-		return fmt.Errorf("Could not get datacenter list: %w", err)
+		return fmt.Errorf("could not get datacenter list: %w", err)
 	}
 	c.lastDCUpdate = time.Now()
 
@@ -97,14 +97,14 @@ func (c *VcCollector) getAllDatacentersClustersAndHosts(ctx context.Context) err
 		// clusters
 		if c.clusters[i], err = finder.ClusterComputeResourceList(ctx, strAsterisk); err != nil {
 			if !errors.As(err, &findNotFoundError) {
-				return fmt.Errorf("Could not get datacenter cluster list: %w", err)
+				return fmt.Errorf("could not get datacenter cluster list: %w", err)
 			}
 		}
 
 		// hosts
 		numhosts = len(c.hosts[i])
 		if c.hosts[i], err = finder.HostSystemList(ctx, strAsterisk); err != nil {
-			return fmt.Errorf("Could not get datacenter node list: %w", err)
+			return fmt.Errorf("could not get datacenter node list: %w", err)
 		}
 
 		// keep hostStates between intervals except if the number of dcs or hosts changed
@@ -142,7 +142,7 @@ func (c *VcCollector) getAllDatacentersNetworks(ctx context.Context) error {
 
 		if c.nets[i], err = finder.NetworkList(ctx, strAsterisk); err != nil {
 			if !errors.As(err, &findNotFoundError) {
-				return fmt.Errorf("Could not get datacenter network list: %w", err)
+				return fmt.Errorf("could not get datacenter network list: %w", err)
 			}
 		}
 	}
@@ -175,7 +175,7 @@ func (c *VcCollector) getAllDatacentersDatastores(ctx context.Context) error {
 
 		if c.dss[i], err = finder.DatastoreList(ctx, strAsterisk); err != nil {
 			if !errors.As(err, &findNotFoundError) {
-				return fmt.Errorf("Could not get datacenter datastore list: %w", err)
+				return fmt.Errorf("could not get datacenter datastore list: %w", err)
 			}
 		}
 	}
@@ -208,7 +208,7 @@ func (c *VcCollector) getAllDatacentersVMs(ctx context.Context) error {
 
 		if c.vms[i], err = finder.VirtualMachineList(ctx, strAsterisk); err != nil {
 			if !errors.As(err, &findNotFoundError) {
-				return fmt.Errorf("Could not get virtual machine list: %w", err)
+				return fmt.Errorf("could not get virtual machine list: %w", err)
 			}
 		}
 	}
