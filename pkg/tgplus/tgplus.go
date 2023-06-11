@@ -7,6 +7,7 @@ package tgplus
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -15,7 +16,7 @@ import (
 // GatherError adds the error to the telegraf accumulator
 func GatherError(acc telegraf.Accumulator, err error) error {
 	// No need to signal errors if we were merely canceled.
-	if err == context.Canceled {
+	if errors.Is(err, context.Canceled) {
 		return nil
 	}
 	acc.AddError(err)

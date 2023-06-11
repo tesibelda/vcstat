@@ -44,14 +44,14 @@ type VcCollector struct {
 // New returns a new VcCollector associated with the provided vCenter URL
 func New(
 	ctx context.Context,
-	vcenterUrl, user, pass string,
+	vcenterURL, user, pass string,
 	clicfg *tls.ClientConfig,
 	dataDuration time.Duration,
 ) (*VcCollector, error) {
 	var err error
 
 	vcc := VcCollector{
-		urlString:    vcenterUrl,
+		urlString:    vcenterURL,
 		dataDuration: dataDuration,
 	}
 	if err = vcc.SetFilterClusters(nil, nil); err != nil {
@@ -66,7 +66,7 @@ func New(
 	vcc.TLSCA = clicfg.TLSCA
 	vcc.InsecureSkipVerify = clicfg.InsecureSkipVerify
 
-	vcc.url, err = govplus.PaseURL(vcenterUrl, user, pass)
+	vcc.url, err = govplus.PaseURL(vcenterURL, user, pass)
 	if err != nil {
 		return nil, err
 	}

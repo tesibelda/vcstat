@@ -94,8 +94,8 @@ func CloseRestClient(ctx context.Context, rc *rest.Client) {
 }
 
 // PaseURL parses vcenter URL params
-func PaseURL(vcenterUrl, user, pass string) (*url.URL, error) {
-	u, err := soap.ParseURL(vcenterUrl)
+func PaseURL(vcenterURL, user, pass string) (*url.URL, error) {
+	u, err := soap.ParseURL(vcenterURL)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", ErrorURLParsing.Error(), err)
 	}
@@ -113,7 +113,7 @@ func ClientIsActive(ctx context.Context, c *govmomi.Client) bool {
 		return false
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(5*time.Second))
+	ctx1, cancel1 := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel1()
 	_, err := methods.GetCurrentTime(ctx1, c.Client) //nolint no need current time
 

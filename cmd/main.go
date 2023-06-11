@@ -17,19 +17,21 @@ import (
 	"github.com/tesibelda/vcstat/plugins/inputs/vcstat"
 )
 
-var pollInterval = flag.Duration(
-	"poll_interval",
-	60*time.Second,
-	"how often to send metrics (default 1m)",
-)
-var configFile = flag.String("config", "", "path to the config file for this plugin")
-var showVersion = flag.Bool("version", false, "show vcstat version and exit")
-
 // Version cotains the actual version of vcstat
-var Version string = ""
-var err error
+var Version string
 
 func main() {
+	var (
+		pollInterval = flag.Duration(
+			"poll_interval",
+			60*time.Second,
+			"how often to send metrics (default 1m)",
+		)
+		configFile  = flag.String("config", "", "path to the config file for this plugin")
+		showVersion = flag.Bool("version", false, "show vcstat version and exit")
+		err         error
+	)
+
 	// parse command line options
 	flag.Parse()
 	if *showVersion {
@@ -54,9 +56,9 @@ func main() {
 	}
 
 	// Set vcstat shim with the configured polling interval and version
-	vcCfg, ok := shim.Input.(*vcstat.VCstatConfig)
+	vcCfg, ok := shim.Input.(*vcstat.Config)
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Error getting shim input as VCstatConfig\n")
+		fmt.Fprintf(os.Stderr, "Error getting shim input as vcstat Config\n")
 		os.Exit(1)
 	}
 	if err = vcCfg.SetPollInterval(*pollInterval); err != nil {

@@ -67,7 +67,7 @@ func (c *VcCollector) CollectHostInfo(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary", "vm", "datastore"}, &hsMos)
 			if err != nil {
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(
@@ -163,7 +163,7 @@ func (c *VcCollector) CollectHostHBA(
 			if err != nil {
 				hostExecutorRunAddError(acc, "storage", host.Name(), err)
 				hostSt.setNotResponding(true)
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				continue
@@ -235,7 +235,7 @@ func (c *VcCollector) CollectHostNIC(
 			if err != nil {
 				hostExecutorRunAddError(acc, "nic", host.Name(), err)
 				hostSt.setNotResponding(true)
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				continue
@@ -311,7 +311,7 @@ func (c *VcCollector) CollectHostFw(
 			if err != nil {
 				hostExecutorRunAddError(acc, "firewall", host.Name(), err)
 				hostSt.setNotResponding(true)
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				continue
@@ -392,7 +392,7 @@ func (c *VcCollector) CollectHostServices(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"serviceInfo.service"}, &hsMos)
 			if err != nil {
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(
@@ -441,11 +441,11 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 	acc telegraf.Accumulator,
 ) error {
 	var (
-		hstags          = make(map[string]string)
-		hsfields        = make(map[string]interface{})
-		hostSt          *hostState
-		t               time.Time
-		responding_code int
+		hstags         = make(map[string]string)
+		hsfields       = make(map[string]interface{})
+		hostSt         *hostState
+		t              time.Time
+		respondingCode int
 	)
 
 	t = time.Now()
@@ -465,13 +465,13 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 			hstags["moid"] = host.Reference().Value
 			hstags["vcenter"] = c.client.Client.URL().Host
 
-			responding_code = 0
+			respondingCode = 0
 			if !hostSt.isHostConnected() {
-				responding_code = 1
+				respondingCode = 1
 			} else if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
-				responding_code = 2
+				respondingCode = 2
 			}
-			hsfields["responding_code"] = responding_code
+			hsfields["respondingCode"] = respondingCode
 			hsfields["response_time_ns"] = int(hostSt.responseTime.Nanoseconds())
 
 			acc.AddFields("vcstat_host_esxcli", hsfields, hstags, t)

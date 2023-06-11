@@ -22,7 +22,7 @@ import (
 	"github.com/tesibelda/vcstat/pkg/tgplus"
 )
 
-type VCstatConfig struct {
+type Config struct {
 	tls.ClientConfig
 	VCenter             string `toml:"vcenter"`
 	Username            string `toml:"username"`
@@ -125,7 +125,7 @@ var sampleConfig = `
 
 func init() {
 	inputs.Add("vcstat", func() telegraf.Input {
-		return &VCstatConfig{
+		return &Config{
 			VCenter:             "https://vcenter.local/sdk",
 			Username:            "user@corp.local",
 			Password:            "secret",
@@ -150,7 +150,7 @@ func init() {
 }
 
 // Init initializes internal vcstat variables with the provided configuration
-func (vcs *VCstatConfig) Init() error {
+func (vcs *Config) Init() error {
 	var err error
 
 	vcs.ctx, vcs.cancel = context.WithCancel(context.Background())
@@ -171,7 +171,7 @@ func (vcs *VCstatConfig) Init() error {
 
 	/// Set vccollector options
 	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() * 0.9))
-	vcs.vcc.SetMaxResponseTime(time.Duration(vcs.pollInterval))
+	vcs.vcc.SetMaxResponseTime(vcs.pollInterval)
 	vcs.vcc.SetSkipHostNotRespondingDuration(
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
 	)
@@ -199,7 +199,7 @@ func (vcs *VCstatConfig) Init() error {
 
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
-func (vcs *VCstatConfig) Stop() {
+func (vcs *Config) Stop() {
 	if vcs.vcc != nil {
 		vcs.vcc.Close(vcs.ctx)
 	}
@@ -207,7 +207,7 @@ func (vcs *VCstatConfig) Stop() {
 }
 
 // SetPollInterval allows telegraf shim to tell vcstat the configured polling interval
-func (vcs *VCstatConfig) SetPollInterval(pollInterval time.Duration) error {
+func (vcs *Config) SetPollInterval(pollInterval time.Duration) error {
 	vcs.pollInterval = pollInterval
 	if vcs.Timeout == 0 {
 		vcs.Timeout = config.Duration(pollInterval)
@@ -216,12 +216,12 @@ func (vcs *VCstatConfig) SetPollInterval(pollInterval time.Duration) error {
 }
 
 // SetVersion let telegraf shim know this version
-func (vcs *VCstatConfig) SetVersion(version string) {
+func (vcs *Config) SetVersion(version string) {
 	vcs.version = version
 }
 
 // StartSelfMetrics initialices selfmonitoring
-func (vcs *VCstatConfig) StartSelfMetrics() {
+func (vcs *Config) StartSelfMetrics() {
 	u, err := url.Parse(vcs.VCenter)
 	if err != nil {
 		return
@@ -238,18 +238,18 @@ func (vcs *VCstatConfig) StartSelfMetrics() {
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
-func (vcs *VCstatConfig) SampleConfig() string {
+func (vcs *Config) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns a short textual description of the plugin
-func (vcs *VCstatConfig) Description() string {
+func (vcs *Config) Description() string {
 	return "Gathers status and basic stats from VMware vCenter"
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
-func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
+func (vcs *Config) Gather(acc telegraf.Accumulator) error {
 	var (
 		startTime time.Time
 		err       error
@@ -287,7 +287,7 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// selfmonitoring
-	vcs.GatherTime.Set(int64(time.Since(startTime).Nanoseconds()))
+	vcs.GatherTime.Set(time.Since(startTime).Nanoseconds())
 	if vcs.HostHBAInstances || vcs.HostNICInstances || vcs.HostFwInstances {
 		vcs.NotRespondingHosts.Set(int64(vcs.vcc.GetNumberNotRespondingHosts()))
 	}
@@ -301,7 +301,7 @@ func (vcs *VCstatConfig) Gather(acc telegraf.Accumulator) error {
 }
 
 // keepActiveSession keeps an active session with vsphere
-func (vcs *VCstatConfig) keepActiveSession(acc telegraf.Accumulator) error {
+func (vcs *Config) keepActiveSession(acc telegraf.Accumulator) error {
 	var (
 		col *vccollector.VcCollector
 		err error
@@ -315,7 +315,7 @@ func (vcs *VCstatConfig) keepActiveSession(acc telegraf.Accumulator) error {
 	col = vcs.vcc
 	if !col.IsActive(vcs.ctx) {
 		if vcs.SessionsCreated.Get() > 0 {
-			acc.AddError(fmt.Errorf("vCenter session not active, re-authenticating..."))
+			acc.AddError(fmt.Errorf("vCenter session not active, re-authenticating"))
 		}
 		if err = col.Open(vcs.ctx, time.Duration(vcs.Timeout)); err != nil {
 			return err
@@ -327,7 +327,7 @@ func (vcs *VCstatConfig) keepActiveSession(acc telegraf.Accumulator) error {
 }
 
 // gatherHighLevelEntities gathers datacenters and clusters stats
-func (vcs *VCstatConfig) gatherHighLevelEntities(ctx context.Context, acc telegraf.Accumulator) error {
+func (vcs *Config) gatherHighLevelEntities(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col *vccollector.VcCollector
 		err error
@@ -358,7 +358,7 @@ func (vcs *VCstatConfig) gatherHighLevelEntities(ctx context.Context, acc telegr
 }
 
 // gatherHost gathers info and stats per host
-func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulator) error {
+func (vcs *Config) gatherHost(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col                 *vccollector.VcCollector
 		hasEsxcliCollection bool
@@ -416,7 +416,7 @@ func (vcs *VCstatConfig) gatherHost(ctx context.Context, acc telegraf.Accumulato
 }
 
 // gatherNetwork gathers network entities info
-func (vcs *VCstatConfig) gatherNetwork(ctx context.Context, acc telegraf.Accumulator) error {
+func (vcs *Config) gatherNetwork(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col *vccollector.VcCollector
 		err error
@@ -439,7 +439,7 @@ func (vcs *VCstatConfig) gatherNetwork(ctx context.Context, acc telegraf.Accumul
 }
 
 // gatherStorage gathers storage entities info
-func (vcs *VCstatConfig) gatherStorage(ctx context.Context, acc telegraf.Accumulator) error {
+func (vcs *Config) gatherStorage(ctx context.Context, acc telegraf.Accumulator) error {
 	if vcs.DatastoreInstances {
 		var col *vccollector.VcCollector
 		var err error
@@ -456,7 +456,7 @@ func (vcs *VCstatConfig) gatherStorage(ctx context.Context, acc telegraf.Accumul
 }
 
 // gatherVM gathers virtual machines info
-func (vcs *VCstatConfig) gatherVM(ctx context.Context, acc telegraf.Accumulator) error {
+func (vcs *Config) gatherVM(ctx context.Context, acc telegraf.Accumulator) error {
 	if vcs.VMInstances {
 		var col *vccollector.VcCollector
 		var err error

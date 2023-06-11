@@ -64,7 +64,7 @@ func (c *VcCollector) CollectHostGraphics(
 			res, err = x.Run([]string{"graphics", "device", "stats", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(

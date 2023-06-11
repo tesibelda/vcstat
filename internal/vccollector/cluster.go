@@ -55,7 +55,7 @@ func (c *VcCollector) CollectClusterInfo(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary"}, &clMos)
 			if err != nil {
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(

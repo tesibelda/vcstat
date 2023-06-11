@@ -42,7 +42,7 @@ func (c *VcCollector) CollectVcenterInfo(
 
 	vctags["vcenter"] = cli.URL().Host
 
-	vcfields["build"] = string(cli.ServiceContent.About.Build)
+	vcfields["build"] = cli.ServiceContent.About.Build
 	vcfields["name"] = cli.ServiceContent.About.Name
 	vcfields["num_datacenters"] = len(c.dcs)
 	vcfields["ostype"] = cli.ServiceContent.About.OsType

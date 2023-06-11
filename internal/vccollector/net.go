@@ -56,7 +56,7 @@ func (c *VcCollector) CollectNetDVS(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"config", "overallStatus"}, &dvsMos)
 			if err != nil {
-				if err, exit = govplus.IsHardQueryError(err); exit {
+				if exit, err = govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(
@@ -128,7 +128,7 @@ func (c *VcCollector) CollectNetDVP(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"config", "overallStatus"}, &dvpMos)
 			if err != nil {
-				if err, exit = govplus.IsHardQueryError(err); exit {
+				if exit, err = govplus.IsHardQueryError(err); exit {
 					return fmt.Errorf("could not get DVP list config property: %w", err)
 				}
 				acc.AddError(

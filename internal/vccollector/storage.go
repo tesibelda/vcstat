@@ -50,7 +50,7 @@ func (c *VcCollector) CollectDatastoresInfo(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &dsMos)
 			if err != nil {
-				if err, exit := govplus.IsHardQueryError(err); exit {
+				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
 				acc.AddError(

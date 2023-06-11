@@ -60,7 +60,7 @@ func (c *VcCollector) CollectVmsInfo(
 		for _, refs := range chunks {
 			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &vmMos)
 			if err != nil {
-				if err, exit = govplus.IsHardQueryError(err); exit {
+				if exit, err = govplus.IsHardQueryError(err); exit {
 					return fmt.Errorf("could not get vm list summary property: %w", err)
 				}
 				acc.AddError(

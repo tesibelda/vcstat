@@ -21,16 +21,16 @@ var (
 )
 
 // IsHardQueryError returns false if error is light and we may continue quering
-func IsHardQueryError(err error) (error, bool) {
+func IsHardQueryError(err error) (bool, error) {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return err, true
+		return true, err
 	}
 
 	var dnsError *net.DNSError
 	var opError *net.OpError
 	if errors.As(err, &dnsError) || errors.As(err, &opError) {
-		return err, true
+		return true, err
 	}
 
-	return err, false
+	return false, err
 }
