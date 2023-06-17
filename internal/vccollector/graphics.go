@@ -52,29 +52,17 @@ func (c *VcCollector) CollectHostGraphics(
 			}
 			startTime = time.Now()
 			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
-				acc.AddError(
-					fmt.Errorf(
-						"could not get esxcli executor for host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
+				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
 			res, err = x.Run([]string{"graphics", "device", "stats", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
+				hostExecutorRunAddError(acc, "graphics device", host.Name(), err)
+				hostSt.setNotResponding(true)
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
 				}
-				acc.AddError(
-					fmt.Errorf(
-						"could not run esxcli storage executor against host %s: %w",
-						host.Name(),
-						err,
-					),
-				)
-				hostSt.setNotResponding(true)
 				continue
 			}
 			t = time.Now()

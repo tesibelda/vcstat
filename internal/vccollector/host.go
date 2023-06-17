@@ -161,7 +161,7 @@ func (c *VcCollector) CollectHostHBA(
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
-				hostExecutorRunAddError(acc, "storage", host.Name(), err)
+				hostExecutorRunAddError(acc, "storage core", host.Name(), err)
 				hostSt.setNotResponding(true)
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
@@ -233,7 +233,7 @@ func (c *VcCollector) CollectHostNIC(
 			res, err = x.Run([]string{"network", "nic", "list"})
 			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
-				hostExecutorRunAddError(acc, "nic", host.Name(), err)
+				hostExecutorRunAddError(acc, "network nic", host.Name(), err)
 				hostSt.setNotResponding(true)
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
@@ -309,7 +309,7 @@ func (c *VcCollector) CollectHostFw(
 			res, err = x.Run([]string{"network", "firewall", "get"})
 			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
 			if err != nil {
-				hostExecutorRunAddError(acc, "firewall", host.Name(), err)
+				hostExecutorRunAddError(acc, "network firewall", host.Name(), err)
 				hostSt.setNotResponding(true)
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
