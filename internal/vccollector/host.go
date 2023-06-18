@@ -159,7 +159,7 @@ func (c *VcCollector) CollectHostHBA(
 				continue
 			}
 			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
-			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
+			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "storage core", host.Name(), err)
 				hostSt.setNotResponding(true)
@@ -168,8 +168,8 @@ func (c *VcCollector) CollectHostHBA(
 				}
 				continue
 			}
-			t = time.Now()
 
+			t = time.Now()
 			for _, rv := range res.Values {
 				if len(rv) > 0 && len(rv["LinkState"]) > 0 {
 					hbatags["clustername"] = c.getClusternameFromHost(i, host)
@@ -184,6 +184,10 @@ func (c *VcCollector) CollectHostHBA(
 
 					acc.AddFields("vcstat_host_hba", hbafields, hbatags, t)
 				}
+			}
+			if t.Sub(startTime) >= c.maxResponseDuration {
+				hostSt.setNotResponding(true)
+				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
 			}
 		}
 	}
@@ -231,7 +235,7 @@ func (c *VcCollector) CollectHostNIC(
 				continue
 			}
 			res, err = x.Run([]string{"network", "nic", "list"})
-			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
+			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "network nic", host.Name(), err)
 				hostSt.setNotResponding(true)
@@ -240,8 +244,8 @@ func (c *VcCollector) CollectHostNIC(
 				}
 				continue
 			}
-			t = time.Now()
 
+			t = time.Now()
 			for _, rv := range res.Values {
 				if len(rv) > 0 && len(rv["LinkStatus"]) > 0 {
 					nictags["clustername"] = c.getClusternameFromHost(i, host)
@@ -260,6 +264,10 @@ func (c *VcCollector) CollectHostNIC(
 
 					acc.AddFields("vcstat_host_nic", nicfields, nictags, t)
 				}
+			}
+			if t.Sub(startTime) >= c.maxResponseDuration {
+				hostSt.setNotResponding(true)
+				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
 			}
 		}
 	}
@@ -307,7 +315,7 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 			res, err = x.Run([]string{"network", "firewall", "get"})
-			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
+			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "network firewall", host.Name(), err)
 				hostSt.setNotResponding(true)
@@ -316,8 +324,8 @@ func (c *VcCollector) CollectHostFw(
 				}
 				continue
 			}
-			t = time.Now()
 
+			t = time.Now()
 			if len(res.Values) > 0 && len(res.Values[0]["Enabled"]) > 0 {
 				fwtags["clustername"] = c.getClusternameFromHost(i, host)
 				fwtags["dcname"] = dc.Name()
@@ -339,6 +347,10 @@ func (c *VcCollector) CollectHostFw(
 				fwfields["loaded"] = loaded
 
 				acc.AddFields("vcstat_host_firewall", fwfields, fwtags, t)
+			}
+			if t.Sub(startTime) >= c.maxResponseDuration {
+				hostSt.setNotResponding(true)
+				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
 			}
 		}
 	}

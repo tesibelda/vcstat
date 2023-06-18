@@ -280,14 +280,11 @@ func (c *hostState) setNotResponding(resp bool) {
 	}
 }
 
-func (c *hostState) setMeanResponseTime(dur, max time.Duration) {
+func (c *hostState) setMeanResponseTime(dur time.Duration) {
 	if c.responseTime == 0 {
 		c.responseTime = dur
 	} else {
 		c.responseTime = (c.responseTime + dur) / 2
-	}
-	if dur > max {
-		c.setNotResponding(true)
 	}
 }
 
@@ -296,8 +293,8 @@ func (c *hostState) isHostConnectedAndResponding(skipDuration time.Duration) boo
 
 	if !c.notConnected {
 		// limit notResponding in cache for skipDuration
-		if time.Since(c.lastNoResponse) > skipDuration {
-			c.notResponding = false
+		if !c.lastNoResponse.IsZero() && time.Since(c.lastNoResponse) > skipDuration {
+			c.setNotResponding(false)
 		}
 		connectedResponding = !c.notResponding
 	}

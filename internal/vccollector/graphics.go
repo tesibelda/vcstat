@@ -56,7 +56,7 @@ func (c *VcCollector) CollectHostGraphics(
 				continue
 			}
 			res, err = x.Run([]string{"graphics", "device", "stats", "list"})
-			hostSt.setMeanResponseTime(time.Since(startTime), c.maxResponseDuration)
+			hostSt.setMeanResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "graphics device", host.Name(), err)
 				hostSt.setNotResponding(true)
@@ -65,8 +65,8 @@ func (c *VcCollector) CollectHostGraphics(
 				}
 				continue
 			}
-			t = time.Now()
 
+			t = time.Now()
 			for _, rv := range res.Values {
 				if len(rv) > 0 && len(rv["DeviceName"]) > 0 {
 					grtags["clustername"] = c.getClusternameFromHost(i, host)
@@ -83,6 +83,10 @@ func (c *VcCollector) CollectHostGraphics(
 
 					acc.AddFields("vcstat_host_graphics", grfields, grtags, t)
 				}
+			}
+			if t.Sub(startTime) >= c.maxResponseDuration {
+				hostSt.setNotResponding(true)
+				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
 			}
 		}
 	}

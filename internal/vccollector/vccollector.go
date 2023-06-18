@@ -43,7 +43,6 @@ type VcCollector struct {
 
 // New returns a new VcCollector associated with the provided vCenter URL
 func New(
-	ctx context.Context,
 	vcenterURL, user, pass string,
 	clicfg *tls.ClientConfig,
 	dataDuration time.Duration,
@@ -128,20 +127,20 @@ func (c *VcCollector) SetSkipHostNotRespondingDuration(du time.Duration) {
 }
 
 // Open opens a vCenter connection session or relogin if session already exists
-func (c *VcCollector) Open(ctx context.Context, timeout time.Duration) error {
+func (c *VcCollector) Open(timeout time.Duration) error {
 	var err error
 
 	// set a login timeout
-	ctx1, cancel1 := context.WithTimeout(ctx, timeout)
-	defer cancel1()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	if c.client != nil {
 		// Try to relogin and if not possible reopen session
-		if err = c.client.Login(ctx1, c.url.User); err == nil {
+		if err = c.client.Login(ctx, c.url.User); err == nil {
 			return nil
 		}
-		c.Close(ctx)
+		c.Close()
 	}
-	c.client, err = govplus.NewClient(ctx1, c.url, &c.ClientConfig)
+	c.client, err = govplus.NewClient(ctx, c.url, &c.ClientConfig)
 	if err == nil {
 		c.coll = property.DefaultCollector(c.client.Client)
 	}
@@ -155,11 +154,13 @@ func (c *VcCollector) IsActive(ctx context.Context) bool {
 }
 
 // Close closes vCenter connection
-func (c *VcCollector) Close(ctx context.Context) {
+func (c *VcCollector) Close() {
 	if c.client != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		_ = c.coll.Destroy(ctx) //nolint: destroy and forget old collector
 		govplus.CloseClient(ctx, c.client)
 		c.client, c.coll = nil, nil
+		cancel()
 	}
 }
 
