@@ -251,7 +251,10 @@ func (vcs *Config) Gather(acc telegraf.Accumulator) error {
 	)
 
 	// poll using a context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(vcs.Timeout))
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		time.Duration(vcs.pollInterval),
+	)
 	defer cancel()
 
 	if err = vcs.keepActiveSession(ctx, acc); err != nil {
@@ -314,10 +317,15 @@ func (vcs *Config) keepActiveSession(
 	col = vcs.vcc
 	if !col.IsActive(ctx) {
 		if vcs.SessionsCreated.Get() > 0 {
-			acc.AddError(fmt.Errorf("vCenter session not active, re-authenticating"))
+			acc.AddError(
+				fmt.Errorf(
+					"vCenter session not active, re-authenticating with %s",
+					vcs.VCenter,
+				),
+			)
 		}
 		if err = col.Open(time.Duration(vcs.Timeout)); err != nil {
-			return err
+			return fmt.Errorf("could open session with vCenter %s", err)
 		}
 		vcs.SessionsCreated.Incr(1)
 	}
