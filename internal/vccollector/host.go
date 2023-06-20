@@ -51,13 +51,14 @@ func (c *VcCollector) CollectHostInfo(
 	}
 
 	for i, dc := range c.dcs {
-		// get Host references and split the list into chunks
+		// get Host reference list and split it into chunks
+		arefs = nil
 		for j, host := range c.hosts[i] {
 			if !c.filterHostMatch(i, host) {
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 			arefs = append(arefs, host.Reference())
@@ -82,7 +83,7 @@ func (c *VcCollector) CollectHostInfo(
 				r = s.Runtime
 				h = s.Hardware
 				if hostSt = c.getHostState(i, hsMo.Name); hostSt == nil {
-					acc.AddError(fmt.Errorf("could not find host state for %s", hsMo.Name))
+					acc.AddError(fmt.Errorf("could not find host state entry for %s", hsMo.Name))
 					continue
 				}
 
@@ -147,7 +148,7 @@ func (c *VcCollector) CollectHostHBA(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -223,7 +224,7 @@ func (c *VcCollector) CollectHostNIC(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -303,7 +304,7 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
@@ -384,13 +385,14 @@ func (c *VcCollector) CollectHostServices(
 	}
 
 	for i, dc := range c.dcs {
-		// get HostServiceSystem references and split the list into chunks
+		// get HostServiceSystem references list and split it into chunks
+		hrefs, srefs = nil, nil
 		for j, host := range c.hosts[i] {
 			if !c.filterHostMatch(i, host) {
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 			if s, err = host.ConfigManager().ServiceSystem(ctx); err != nil {
@@ -467,7 +469,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 				continue
 			}
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 

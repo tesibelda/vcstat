@@ -44,7 +44,7 @@ func (c *VcCollector) CollectHostGraphics(
 	for i, dc := range c.dcs {
 		for j, host := range c.hosts[i] {
 			if hostSt = c.getHostStateIdx(i, j); hostSt == nil {
-				acc.AddError(fmt.Errorf("could not find host state for %s", host.Name()))
+				acc.AddError(fmt.Errorf("could not find host state idx entry for %s", host.Name()))
 				continue
 			}
 			if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
