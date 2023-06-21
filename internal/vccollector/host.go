@@ -459,8 +459,13 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 		hsfields       = make(map[string]interface{})
 		hostSt         *hostState
 		t              time.Time
+		z              time.Duration
 		respondingCode int
 	)
+
+	if c.client == nil {
+		return fmt.Errorf("could not get host esxcli response: %w", govplus.ErrorNoClient)
+	}
 
 	t = time.Now()
 	for i, dc := range c.dcs {
@@ -482,7 +487,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 			respondingCode = 0
 			if !hostSt.isHostConnected() {
 				respondingCode = 1
-			} else if !hostSt.isHostConnectedAndResponding(c.skipNotRespondigFor) {
+			} else if !hostSt.isHostConnectedAndResponding(z) {
 				respondingCode = 2
 			}
 			hsfields["respondingCode"] = respondingCode
