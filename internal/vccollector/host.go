@@ -490,7 +490,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 			} else if !hostSt.isHostConnectedAndResponding(z) {
 				respondingCode = 2
 			}
-			hsfields["respondingCode"] = respondingCode
+			hsfields["responding_code"] = respondingCode
 			hsfields["response_time_ns"] = int(hostSt.responseTime.Nanoseconds())
 
 			acc.AddFields("vcstat_host_esxcli", hsfields, hstags, t)
