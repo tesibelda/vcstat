@@ -8,6 +8,7 @@ package vcstat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -120,6 +121,8 @@ var sampleConfig = `
   ## collect virtual machine measurement (vcstat_vm)
   # vm_instances = false
 `
+
+var ErrorNoCollector = errors.New("collector not yet created")
 
 func init() {
 	inputs.Add("vcstat", func() telegraf.Input {
@@ -343,7 +346,9 @@ func (vcs *Config) gatherHighLevelEntities(
 		err error
 	)
 
-	col = vcs.vcc
+	if col = vcs.vcc; col == nil {
+		return ErrorNoCollector
+	}
 
 	//--- Get vCenter basic stats
 	if err = col.CollectVcenterInfo(ctx, acc); err != nil {
@@ -378,7 +383,10 @@ func (vcs *Config) gatherHost(
 		err                 error
 	)
 
-	col = vcs.vcc
+	if col = vcs.vcc; col == nil {
+		return ErrorNoCollector
+	}
+
 	if vcs.HostInstances {
 		if err = col.CollectHostInfo(ctx, acc); err != nil {
 			return err
@@ -387,6 +395,7 @@ func (vcs *Config) gatherHost(
 
 	if vcs.HostHBAInstances {
 		hasEsxcliCollection = true
+		col.ResetResponseTimes()
 		if err = col.CollectHostHBA(ctx, acc); err != nil {
 			return err
 		}
@@ -438,7 +447,10 @@ func (vcs *Config) gatherNetwork(
 		err error
 	)
 
-	col = vcs.vcc
+	if col = vcs.vcc; col == nil {
+		return ErrorNoCollector
+	}
+
 	if vcs.NetDVSInstances {
 		if err = col.CollectNetDVS(ctx, acc); err != nil {
 			return err
@@ -462,9 +474,8 @@ func (vcs *Config) gatherStorage(
 	if vcs.DatastoreInstances {
 		var col *vccollector.VcCollector
 		var err error
-		col = vcs.vcc
-		if col == nil {
-			return nil
+		if col = vcs.vcc; col == nil {
+			return ErrorNoCollector
 		}
 		if err = col.CollectDatastoresInfo(ctx, acc); err != nil {
 			return tgplus.GatherError(acc, err)
@@ -482,9 +493,8 @@ func (vcs *Config) gatherVM(
 	if vcs.VMInstances {
 		var col *vccollector.VcCollector
 		var err error
-		col = vcs.vcc
-		if col == nil {
-			return nil
+		if col = vcs.vcc; col == nil {
+			return ErrorNoCollector
 		}
 		if err = col.CollectVmsInfo(ctx, acc); err != nil {
 			return tgplus.GatherError(acc, err)

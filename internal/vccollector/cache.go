@@ -269,6 +269,15 @@ func (c *VcCollector) GetNumberNotRespondingHosts() int {
 	return numnotresponding
 }
 
+// ResetResponseTimes set host states response times to 0
+func (c *VcCollector) ResetResponseTimes() {
+	for i := range c.dcs {
+		for _, hState := range c.hostStates[i] {
+			hState.responseTime = 0
+		}
+	}
+}
+
 func (c *hostState) setNotConnected(conn bool) {
 	c.notConnected = conn
 }
@@ -286,6 +295,10 @@ func (c *hostState) setMeanResponseTime(dur time.Duration) {
 	} else {
 		c.responseTime = (c.responseTime + dur) / 2
 	}
+}
+
+func (c *hostState) sumResponseTime(dur time.Duration) {
+	c.responseTime += dur
 }
 
 func (c *hostState) isHostConnectedAndResponding(skipDuration time.Duration) bool {
