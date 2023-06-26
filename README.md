@@ -24,7 +24,7 @@ Use telegraf v1.14 or above so that execd input is available.
   username = "user@corp.local"
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
-  # timeout = "0s"
+  # timeout = "10s"
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"

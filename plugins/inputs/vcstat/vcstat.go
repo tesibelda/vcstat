@@ -68,7 +68,7 @@ var sampleConfig = `
   username = "user@corp.local"
   password = "secret"
   ## requests timeout. Here 0s is interpreted as the polling interval
-  # timeout = "0s"
+  # timeout = "10s"
 
   ## Optional SSL Config
   # tls_ca = "/path/to/cafile"
@@ -131,7 +131,7 @@ func init() {
 			Username:            "user@corp.local",
 			Password:            "secret",
 			InternalAlias:       "",
-			Timeout:             config.Duration(time.Second * 0),
+			Timeout:             config.Duration(time.Second * 10),
 			QueryBulkSize:       100,
 			IntSkipNotRespondig: 20,
 			ClusterInstances:    true,
@@ -169,7 +169,9 @@ func (vcs *Config) Init() error {
 	}
 
 	/// Set vccollector options
-	vcs.vcc.SetDataDuration(time.Duration(vcs.pollInterval.Seconds() * 0.9))
+	vcs.vcc.SetDataDuration(
+		(time.Duration(vcs.pollInterval.Seconds() * 0.95).Round(time.Second)),
+	)
 	vcs.vcc.SetMaxResponseTime(vcs.pollInterval)
 	vcs.vcc.SetSkipHostNotRespondingDuration(
 		time.Duration(vcs.pollInterval.Seconds() * float64(vcs.IntSkipNotRespondig)),
@@ -207,7 +209,7 @@ func (vcs *Config) Stop() {
 // SetPollInterval allows telegraf shim to tell vcstat the configured polling interval
 func (vcs *Config) SetPollInterval(pollInterval time.Duration) error {
 	vcs.pollInterval = pollInterval
-	if vcs.Timeout == 0 {
+	if vcs.Timeout == 0 || vcs.Timeout > config.Duration(pollInterval) {
 		vcs.Timeout = config.Duration(pollInterval)
 	}
 	return nil
