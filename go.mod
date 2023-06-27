@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/influxdata/telegraf v1.26.3
-	github.com/vmware/govmomi v0.30.4
+	github.com/vmware/govmomi v0.30.5
 )
 
 require (
