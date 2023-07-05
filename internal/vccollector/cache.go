@@ -272,49 +272,41 @@ func (c *VcCollector) GetNumberNotRespondingHosts() int {
 // ResetResponseTimes set host states response times to 0
 func (c *VcCollector) ResetResponseTimes() {
 	for i := range c.dcs {
-		for _, hState := range c.hostStates[i] {
-			hState.responseTime = 0
+		for j := range c.hostStates[i] {
+			c.hostStates[i][j].responseTime = 0
 		}
 	}
 }
 
-func (c *hostState) setNotConnected(conn bool) {
-	c.notConnected = conn
+func (h *hostState) setNotConnected(conn bool) {
+	h.notConnected = conn
 }
 
-func (c *hostState) setNotResponding(resp bool) {
-	c.notResponding = resp
+func (h *hostState) setNotResponding(resp bool) {
+	h.notResponding = resp
 	if resp {
-		c.lastNoResponse = time.Now()
+		h.lastNoResponse = time.Now()
 	}
 }
 
-func (c *hostState) setMeanResponseTime(dur time.Duration) {
-	if c.responseTime == 0 {
-		c.responseTime = dur
-	} else {
-		c.responseTime = (c.responseTime + dur) / 2
-	}
+func (h *hostState) sumResponseTime(dur time.Duration) {
+	h.responseTime += dur
 }
 
-func (c *hostState) sumResponseTime(dur time.Duration) {
-	c.responseTime += dur
-}
-
-func (c *hostState) isHostConnectedAndResponding(skipDuration time.Duration) bool {
+func (h *hostState) isHostConnectedAndResponding(skipDuration time.Duration) bool {
 	var connectedResponding bool
 
-	if !c.notConnected {
+	if !h.notConnected {
 		// limit notResponding in cache for skipDuration
-		if !c.lastNoResponse.IsZero() && time.Since(c.lastNoResponse) > skipDuration {
-			c.setNotResponding(false)
+		if !h.lastNoResponse.IsZero() && time.Since(h.lastNoResponse) > skipDuration {
+			h.setNotResponding(false)
 		}
-		connectedResponding = !c.notResponding
+		connectedResponding = !h.notResponding
 	}
 
 	return connectedResponding
 }
 
-func (c *hostState) isHostConnected() bool {
-	return !c.notConnected
+func (h *hostState) isHostConnected() bool {
+	return !h.notConnected
 }

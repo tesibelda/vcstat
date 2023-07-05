@@ -56,7 +56,7 @@ func (c *VcCollector) CollectHostGraphics(
 				continue
 			}
 			res, err = x.Run([]string{"graphics", "device", "stats", "list"})
-			hostSt.setMeanResponseTime(time.Since(startTime))
+			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "graphics device", host.Name(), err)
 				hostSt.setNotResponding(true)

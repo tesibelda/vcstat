@@ -394,10 +394,10 @@ func (vcs *Config) gatherHost(
 			return err
 		}
 	}
+	col.ResetResponseTimes()
 
 	if vcs.HostHBAInstances {
 		hasEsxcliCollection = true
-		col.ResetResponseTimes()
 		if err = col.CollectHostHBA(ctx, acc); err != nil {
 			return err
 		}
