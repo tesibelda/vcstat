@@ -114,6 +114,9 @@ func (c *VcCollector) CollectHostInfo(
 
 				acc.AddFields("vcstat_host", hsfields, hstags, t)
 			}
+			if err = ctx.Err(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -189,6 +192,9 @@ func (c *VcCollector) CollectHostHBA(
 			if t.Sub(startTime) >= c.maxResponseDuration {
 				hostSt.setNotResponding(true)
 				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
+			}
+			if err = ctx.Err(); err != nil {
+				return err
 			}
 		}
 	}
@@ -269,6 +275,9 @@ func (c *VcCollector) CollectHostNIC(
 			if t.Sub(startTime) >= c.maxResponseDuration {
 				hostSt.setNotResponding(true)
 				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
+			}
+			if err = ctx.Err(); err != nil {
+				return err
 			}
 		}
 	}
@@ -352,6 +361,9 @@ func (c *VcCollector) CollectHostFw(
 			if t.Sub(startTime) >= c.maxResponseDuration {
 				hostSt.setNotResponding(true)
 				return fmt.Errorf("slow response from %s: %w", host.Name(), context.DeadlineExceeded)
+			}
+			if err = ctx.Err(); err != nil {
+				return err
 			}
 		}
 	}
@@ -443,6 +455,9 @@ func (c *VcCollector) CollectHostServices(
 					acc.AddFields("vcstat_host_service", hsfields, hstags, t)
 				}
 			}
+			if err = ctx.Err(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -460,6 +475,7 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 		hostSt         *hostState
 		t              time.Time
 		z              time.Duration
+		err            error
 		respondingCode int
 	)
 
@@ -494,6 +510,9 @@ func (c *VcCollector) ReportHostEsxcliResponse(
 			hsfields["response_time_ns"] = int(hostSt.responseTime.Nanoseconds())
 
 			acc.AddFields("vcstat_host_esxcli", hsfields, hstags, t)
+		}
+		if err = ctx.Err(); err != nil {
+			return err
 		}
 	}
 
