@@ -543,7 +543,13 @@ func (c *VcCollector) getHostObjectFromReference(
 	dcindex int,
 	r *types.ManagedObjectReference,
 ) *object.HostSystem {
+	if len(c.hosts) < dcindex || r == nil {
+		return nil
+	}
 	for _, host := range c.hosts[dcindex] {
+		if host == nil {
+			continue
+		}
 		if host.Reference().Type == r.Type && host.Reference().Value == r.Value {
 			return host
 		}
