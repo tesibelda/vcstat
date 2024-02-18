@@ -79,7 +79,7 @@ func (c *VcCollector) CollectHostInfo(
 			t = time.Now()
 
 			for _, hsMo := range hsMos {
-				s = &hsMo.Summary
+				s = &(hsMo.Summary)
 				r = s.Runtime
 				h = s.Hardware
 				if hostSt = c.getHostState(i, hsMo.Name); hostSt == nil {

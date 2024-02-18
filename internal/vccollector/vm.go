@@ -71,7 +71,7 @@ func (c *VcCollector) CollectVmsInfo(
 			t = time.Now()
 
 			for _, vm := range vmMos {
-				s = &vm.Summary
+				s = &(vm.Summary)
 				r = &s.Runtime
 				k = &s.Config
 				hostname = ""
