@@ -8,6 +8,7 @@ package vccollector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -68,7 +69,7 @@ func (c *VcCollector) CollectNetDVS(
 
 			for _, dvs := range dvsMos {
 				if dvsConfig = dvs.Config.GetDVSConfigInfo(); dvsConfig == nil {
-					acc.AddError(fmt.Errorf("could not get DVS configuration info"))
+					acc.AddError(errors.New("could not get DVS configuration info"))
 					continue
 				}
 
