@@ -6,7 +6,7 @@ toolchain go1.22.5
 
 require (
 	github.com/influxdata/telegraf v1.31.3
-	github.com/vmware/govmomi v0.39.0
+	github.com/vmware/govmomi v0.46.3
 )
 
 require (
