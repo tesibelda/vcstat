@@ -16,7 +16,7 @@ import (
 
 	"github.com/tesibelda/vcstat/pkg/govplus"
 
-	"github.com/vmware/govmomi/govc/host/esxcli"
+	"github.com/vmware/govmomi/cli/esx"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
@@ -131,8 +131,8 @@ func (c *VcCollector) CollectHostHBA(
 	var (
 		hbatags      = make(map[string]string)
 		hbafields    = make(map[string]interface{})
-		x            *esxcli.Executor
-		res          *esxcli.Response
+		x            *esx.Executor
+		res          *esx.Response
 		hostSt       *hostState
 		startTime, t time.Time
 		err          error
@@ -158,11 +158,11 @@ func (c *VcCollector) CollectHostHBA(
 				continue
 			}
 			startTime = time.Now()
-			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+			if x, err = esx.NewExecutor(ctx, c.client.Client, host); err != nil {
 				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
-			res, err = x.Run([]string{"storage", "core", "adapter", "list"})
+			res, err = x.Run(ctx, []string{"storage", "core", "adapter", "list"})
 			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "storage core", host.Name(), err)
@@ -210,8 +210,8 @@ func (c *VcCollector) CollectHostNIC(
 	var (
 		nictags      = make(map[string]string)
 		nicfields    = make(map[string]interface{})
-		x            *esxcli.Executor
-		res          *esxcli.Response
+		x            *esx.Executor
+		res          *esx.Response
 		hostSt       *hostState
 		startTime, t time.Time
 		err          error
@@ -237,11 +237,11 @@ func (c *VcCollector) CollectHostNIC(
 				continue
 			}
 			startTime = time.Now()
-			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+			if x, err = esx.NewExecutor(ctx, c.client.Client, host); err != nil {
 				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
-			res, err = x.Run([]string{"network", "nic", "list"})
+			res, err = x.Run(ctx, []string{"network", "nic", "list"})
 			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "network nic", host.Name(), err)
@@ -293,8 +293,8 @@ func (c *VcCollector) CollectHostFw(
 	var (
 		fwtags       = make(map[string]string)
 		fwfields     = make(map[string]interface{})
-		x            *esxcli.Executor
-		res          *esxcli.Response
+		x            *esx.Executor
+		res          *esx.Response
 		hostSt       *hostState
 		startTime, t time.Time
 		err          error
@@ -320,11 +320,11 @@ func (c *VcCollector) CollectHostFw(
 				continue
 			}
 			startTime = time.Now()
-			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+			if x, err = esx.NewExecutor(ctx, c.client.Client, host); err != nil {
 				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
-			res, err = x.Run([]string{"network", "firewall", "get"})
+			res, err = x.Run(ctx, []string{"network", "firewall", "get"})
 			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "network firewall", host.Name(), err)

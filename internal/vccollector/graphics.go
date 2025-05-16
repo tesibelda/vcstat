@@ -16,7 +16,7 @@ import (
 
 	"github.com/tesibelda/vcstat/pkg/govplus"
 
-	"github.com/vmware/govmomi/govc/host/esxcli"
+	"github.com/vmware/govmomi/cli/esx"
 )
 
 // CollectHostGraphics gathers host graphics device stats
@@ -27,8 +27,8 @@ func (c *VcCollector) CollectHostGraphics(
 	var (
 		grtags       = make(map[string]string)
 		grfields     = make(map[string]interface{})
-		x            *esxcli.Executor
-		res          *esxcli.Response
+		x            *esx.Executor
+		res          *esx.Response
 		hostSt       *hostState
 		startTime, t time.Time
 		err          error
@@ -51,11 +51,11 @@ func (c *VcCollector) CollectHostGraphics(
 				continue
 			}
 			startTime = time.Now()
-			if x, err = esxcli.NewExecutor(c.client.Client, host); err != nil {
+			if x, err = esx.NewExecutor(ctx, c.client.Client, host); err != nil {
 				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
-			res, err = x.Run([]string{"graphics", "device", "stats", "list"})
+			res, err = x.Run(ctx, []string{"graphics", "device", "stats", "list"})
 			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "graphics device", host.Name(), err)
