@@ -80,7 +80,9 @@ func (c *VcCollector) CollectHostInfo(
 
 			for _, hsMo := range hsMos {
 				s = &(hsMo.Summary)
-				r = s.Runtime
+				if r = s.Runtime; r == nil {
+					continue
+				}
 				h = s.Hardware
 				if hostSt = c.getHostState(i, hsMo.Name); hostSt == nil {
 					acc.AddError(fmt.Errorf("could not find host state entry for %s", hsMo.Name))
@@ -106,9 +108,11 @@ func (c *VcCollector) CollectHostInfo(
 				hsfields["reboot_required"] = s.RebootRequired
 				hsfields["status"] = string(s.OverallStatus)
 				hsfields["status_code"] = hsCode
-				hsfields["memory_size"] = h.MemorySize
-				hsfields["num_cpus"] = h.NumCpuCores
-				hsfields["cpu_freq"] = h.CpuMhz
+				if h != nil {
+					hsfields["memory_size"] = h.MemorySize
+					hsfields["num_cpus"] = h.NumCpuCores
+					hsfields["cpu_freq"] = h.CpuMhz
+				}
 				hsfields["num_vms"] = len(hsMo.Vm)
 				hsfields["num_datastores"] = len(hsMo.Datastore)
 
