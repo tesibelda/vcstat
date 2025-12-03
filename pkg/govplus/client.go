@@ -109,13 +109,16 @@ func PaseURL(vcenterURL, user, pass string) (*url.URL, error) {
 
 // ClientIsActive returns true if the vCenter soap session is active
 func ClientIsActive(ctx context.Context, c *govmomi.Client) bool {
-	if c == nil || !c.Client.Valid() {
+	if c == nil {
 		return false
 	}
-
+	client := c.Client
+	if client != nil && !client.Valid() {
+		return false
+	}
 	ctx1, cancel1 := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel1()
-	_, err := methods.GetCurrentTime(ctx1, c.Client) //nolint no need current time
+	_, err := methods.GetCurrentTime(ctx1, client) //nolint no need current time
 
 	return err == nil
 }
