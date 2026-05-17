@@ -180,6 +180,7 @@
 	- consolidation_needed (bool)
 	- max_cpu_usage (int) in MHz
 	- max_mem_usage (int) in bytes
+	- memory_overhead (int) in bytes
 	- memory_size (int) in bytes
 	- num_eth_cards (int)
 	- num_vdisks (int)

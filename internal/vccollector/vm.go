@@ -94,6 +94,7 @@ func (c *VcCollector) CollectVmsInfo(
 				vmfields["consolidation_needed"] = r.ConsolidationNeeded
 				vmfields["max_cpu_usage"] = r.MaxCpuUsage
 				vmfields["max_mem_usage"] = int64(r.MaxMemoryUsage) * (1024 * 1024)
+				vmfields["memory_overhead"] = r.MemoryOverhead
 				vmfields["memory_size"] = int64(s.Config.MemorySizeMB) * (1024 * 1024)
 				vmfields["num_eth_cards"] = k.NumEthernetCards
 				vmfields["num_vdisks"] = k.NumVirtualDisks
