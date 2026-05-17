@@ -56,6 +56,8 @@ type Config struct {
 	version      string
 	pollInterval time.Duration
 	vcc          *vccollector.VcCollector
+	pCtx         context.Context
+	pCancel      context.CancelFunc
 
 	GatherTime         selfstat.Stat
 	NotRespondingHosts selfstat.Stat
@@ -195,12 +197,15 @@ func (vcs *Config) Init() error {
 		return fmt.Errorf("error parsing URL for vcenter: %w", err)
 	}
 
+	vcs.pCtx, vcs.pCancel = context.WithCancel(context.Background())
+
 	return err
 }
 
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
 func (vcs *Config) Stop() {
+	vcs.pCancel()
 	if vcs.vcc != nil {
 		vcs.vcc.Close()
 	}
@@ -256,10 +261,7 @@ func (vcs *Config) Gather(acc telegraf.Accumulator) error {
 	)
 
 	// poll using a context with timeout
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		vcs.pollInterval,
-	)
+	ctx, cancel := context.WithTimeout(vcs.pCtx, vcs.pollInterval)
 	defer cancel()
 
 	if err = vcs.keepActiveSession(ctx, acc); err != nil {
@@ -305,10 +307,7 @@ func (vcs *Config) Gather(acc telegraf.Accumulator) error {
 }
 
 // keepActiveSession keeps an active session with vsphere
-func (vcs *Config) keepActiveSession(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-) error {
+func (vcs *Config) keepActiveSession(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col *vccollector.VcCollector
 		err error
@@ -339,10 +338,7 @@ func (vcs *Config) keepActiveSession(
 }
 
 // gatherHighLevelEntities gathers datacenters and clusters stats
-func (vcs *Config) gatherHighLevelEntities(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-) error {
+func (vcs *Config) gatherHighLevelEntities(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col *vccollector.VcCollector
 		err error
@@ -375,10 +371,7 @@ func (vcs *Config) gatherHighLevelEntities(
 }
 
 // gatherHost gathers info and stats per host
-func (vcs *Config) gatherHost(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-) error {
+func (vcs *Config) gatherHost(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col                 *vccollector.VcCollector
 		hasEsxcliCollection bool
@@ -440,10 +433,7 @@ func (vcs *Config) gatherHost(
 }
 
 // gatherNetwork gathers network entities info
-func (vcs *Config) gatherNetwork(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-) error {
+func (vcs *Config) gatherNetwork(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		col *vccollector.VcCollector
 		err error
@@ -469,10 +459,7 @@ func (vcs *Config) gatherNetwork(
 }
 
 // gatherStorage gathers storage entities info
-func (vcs *Config) gatherStorage(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-) error {
+func (vcs *Config) gatherStorage(ctx context.Context, acc telegraf.Accumulator) error {
 	if vcs.DatastoreInstances {
 		var col *vccollector.VcCollector
 		var err error
@@ -488,10 +475,7 @@ func (vcs *Config) gatherStorage(
 }
 
 // gatherVM gathers virtual machines info
-func (vcs *Config) gatherVM(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-) error {
+func (vcs *Config) gatherVM(ctx context.Context, acc telegraf.Accumulator) error {
 	if vcs.VMInstances {
 		var col *vccollector.VcCollector
 		var err error
