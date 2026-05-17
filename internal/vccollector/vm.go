@@ -91,7 +91,7 @@ func (c *VcCollector) CollectVmsInfo(
 
 				vmfields["connection_state"] = string(r.ConnectionState)
 				vmfields["connection_state_code"] = vmConnectionStateCode(string(r.ConnectionState))
-				vmfields["consolidation_needed"] = *(r.ConsolidationNeeded)
+				vmfields["consolidation_needed"] = r.ConsolidationNeeded
 				vmfields["max_cpu_usage"] = r.MaxCpuUsage
 				vmfields["max_mem_usage"] = int64(r.MaxMemoryUsage) * (1024 * 1024)
 				vmfields["memory_size"] = int64(s.Config.MemorySizeMB) * (1024 * 1024)
