@@ -53,7 +53,7 @@ func (c *VcCollector) CollectClusterInfo(
 		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
 
 		for _, refs := range chunks {
-			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary"}, &clMos)
+			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary"}, &clMos) //nolint: goconst
 			if err != nil {
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err

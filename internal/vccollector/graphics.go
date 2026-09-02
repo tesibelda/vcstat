@@ -55,7 +55,7 @@ func (c *VcCollector) CollectHostGraphics(
 				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
-			res, err = x.Run(ctx, []string{"graphics", "device", "stats", "list"})
+			res, err = x.Run(ctx, []string{"graphics", "device", "stats", "list"}) //nolint: goconst
 			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "graphics device", host.Name(), err)

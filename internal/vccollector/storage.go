@@ -48,7 +48,7 @@ func (c *VcCollector) CollectDatastoresInfo(
 		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
 
 		for _, refs := range chunks {
-			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &dsMos)
+			err = c.coll.Retrieve(ctx, refs, []string{"summary"}, &dsMos) //nolint: goconst
 			if err != nil {
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err

@@ -66,7 +66,7 @@ func (c *VcCollector) CollectHostInfo(
 		chunks := chunckMoRefSlice(arefs, c.queryBulkSize)
 
 		for _, refs := range chunks {
-			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary", "vm", "datastore"}, &hsMos)
+			err = c.coll.Retrieve(ctx, refs, []string{"name", "summary", "vm", "datastore"}, &hsMos) //nolint: goconst
 			if err != nil {
 				if exit, err := govplus.IsHardQueryError(err); exit {
 					return err
@@ -166,7 +166,7 @@ func (c *VcCollector) CollectHostHBA(
 				hostExecutorNewAddError(acc, host.Name(), err)
 				continue
 			}
-			res, err = x.Run(ctx, []string{"storage", "core", "adapter", "list"})
+			res, err = x.Run(ctx, []string{"storage", "core", "adapter", "list"}) //nolint: goconst
 			hostSt.sumResponseTime(time.Since(startTime))
 			if err != nil {
 				hostExecutorRunAddError(acc, "storage core", host.Name(), err)
